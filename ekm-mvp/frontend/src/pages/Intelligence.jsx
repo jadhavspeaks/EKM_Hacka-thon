@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { getAnalyticsStats, getHealthReport, getRiskReport, getOnboardingPath, getKnowledgeGaps, getExpertsAtRisk, getCoverageReport, getVelocity, getHandover, getHandoverProgress, saveHandoverProgress, searchPeople, getPersonProfile, getConfig } from '../api'
 import { Spinner, SourceBadge } from '../components/UI'
 
@@ -518,31 +519,40 @@ function PeopleTab({ teamsDomain }) {
             </div>
           )}
 
-          {/* By source */}
+          {/* By source — static display only */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Contributions by Source</h3>
             <div className="flex flex-wrap gap-3">
               {Object.entries(profile.by_source || {}).map(([src, count]) => (
-                <div key={src} className="flex items-center gap-1.5 text-sm">
+                <div
+                  key={src}
+                  className="flex items-center gap-1.5 text-sm bg-white border border-gray-200 px-3 py-1.5 rounded-lg"
+                >
                   <SourceBadge type={src} />
-                  <span className="font-medium text-gray-700">{count} docs</span>
+                  <span className="font-semibold text-gray-700">{count} docs</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Top topics */}
+          {/* Top topics — CLICKABLE → triggers search for that topic */}
           {profile.top_topics?.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Top Topics <span className="text-xs text-gray-400 font-normal">— click to search</span></h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                Top Topics <span className="text-xs text-gray-400 font-normal">— click to search</span>
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {profile.top_topics.map(t => (
                   <button
                     key={t.topic}
-                    onClick={() => { setProfile(null); setQuery(t.topic); searchPeople(t.topic).then(r => setResults(r.data)) }}
+                    onClick={() => {
+                      setProfile(null)
+                      setQuery(t.topic)
+                      searchPeople(t.topic).then(r => setResults(r.data))
+                    }}
                     className="text-xs bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 hover:border-teal-400 transition-colors px-2 py-1 rounded-full cursor-pointer"
                   >
-                    {t.topic} ({t.count})
+                    {t.topic} <span className="text-teal-400">({t.count})</span>
                   </button>
                 ))}
               </div>
@@ -1336,8 +1346,14 @@ const TAB_META = {
 }
 
 export default function Intelligence() {
-  const [tab, setTab]                 = useState('analytics')
+  const location = useLocation()
+  const [tab, setTab]                 = useState(location.state?.tab || 'analytics')
   const [teamsDomain, setTeamsDomain] = useState('citi.com')
+
+  // Update tab if navigated to with a specific tab in state
+  useEffect(() => {
+    if (location.state?.tab) setTab(location.state.tab)
+  }, [location.state?.tab])
 
   useEffect(() => {
     getConfig().then(r => { if (r.data?.teams_domain) setTeamsDomain(r.data.teams_domain) })
@@ -1347,8 +1363,7 @@ export default function Intelligence() {
   const meta = TAB_META[tab] || {}
 
   return (
-    <div className="flex gap-0 h-full min-h-screen" style={{height:'calc(100vh - 0px)'}}
-
+    <div className="flex gap-0 h-full min-h-screen" style={{height:'calc(100vh - 0px)'}}>
       {/* ── Sidebar ── */}
       <aside className="w-56 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col pt-5 pb-8 overflow-y-auto">
         <div className="px-4 mb-5">

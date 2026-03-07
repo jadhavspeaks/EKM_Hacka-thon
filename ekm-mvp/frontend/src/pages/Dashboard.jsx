@@ -1,347 +1,473 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getDashboard, triggerSync, getAnalyticsStats } from '../api'
-import { SourceBadge, StatusBadge, Spinner } from '../components/UI'
-import {
-  RefreshCw, Database, Search, TrendingUp, AlertTriangle,
-  Clock, CheckCircle, Activity, Users, FileText, Zap
-} from 'lucide-react'
+import { Spinner } from '../components/UI'
+import { RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle,
+         CheckCircle2, Clock, Database, Search, Activity,
+         Users, FileText, Zap, ChevronRight } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 
-// ── Colour tokens ─────────────────────────────────────────────────────────────
-const SRC_CFG = {
-  confluence: { label: 'Confluence', dot: 'bg-purple-500', ring: 'border-purple-200', bg: 'bg-purple-50',  text: 'text-purple-700' },
-  jira:       { label: 'Jira',       dot: 'bg-orange-500', ring: 'border-orange-200', bg: 'bg-orange-50',  text: 'text-orange-700' },
-  github:     { label: 'GitHub',     dot: 'bg-gray-700',   ring: 'border-gray-200',   bg: 'bg-gray-50',    text: 'text-gray-700'   },
-  sharepoint: { label: 'SharePoint', dot: 'bg-blue-500',   ring: 'border-blue-200',   bg: 'bg-blue-50',    text: 'text-blue-700'   },
+const T = {
+  bg:'#07111f', bgCard:'#0d1f35', bgMid:'#0a1628',
+  border:'#1a3050', borderLt:'#1e3a5e',
+  teal:'#00d4aa', tealDk:'#00a88a',
+  orange:'#ff6b35', red:'#f43f5e', green:'#10d98a', gold:'#f59e0b',
+  purple:'#818cf8', blue:'#3b82f6',
+  textPri:'#e2eaf4', textSec:'#6b8aad', textDim:'#3d5a7a',
 }
 
-// ── Mini sparkline (SVG) ──────────────────────────────────────────────────────
-function Sparkline({ values = [], color = '#0d9488' }) {
-  if (!values.length) return null
+const SRC = {
+  confluence:{ label:'Confluence', color:'#818cf8', dot:'#818cf8' },
+  jira:      { label:'Jira',       color:'#ff6b35', dot:'#ff6b35' },
+  github:    { label:'GitHub',     color:'#94a3b8', dot:'#94a3b8' },
+  sharepoint:{ label:'SharePoint', color:'#3b82f6', dot:'#3b82f6' },
+}
+
+function Spark({ values=[], color=T.teal, h=28, w=80 }) {
+  if (values.length < 2) return null
   const max = Math.max(...values, 1)
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * 80
-    const y = 28 - (v / max) * 26
-    return `${x},${y}`
+  const pts = values.map((v,i)=>{
+    const x=(i/(values.length-1))*w
+    const y=h-2-((v/max)*(h-4))
+    return `${x.toFixed(1)},${y.toFixed(1)}`
   }).join(' ')
+  const last=pts.split(' ').at(-1).split(',')
   return (
-    <svg width="80" height="28" viewBox="0 0 80 28" className="opacity-60">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      <defs>
+        <linearGradient id={`g${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${pts} ${w},${h}`} fill={`url(#g${color.replace('#','')})`}/>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={last[0]} cy={last[1]} r="2.5" fill={color}/>
     </svg>
   )
 }
 
-// ── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ icon: Icon, label, value, sub, trend, trendVal, iconColor = 'text-teal-600', iconBg = 'bg-teal-50', onClick }) {
+function Beacon({ status }) {
+  const col = status==='success'||status==='idle' ? T.green : status==='error'||status==='failed' ? T.red : T.gold
   return (
-    <div
-      className={`bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 ${onClick ? 'cursor-pointer hover:border-teal-300 transition-colors' : ''}`}
-      onClick={onClick}
-    >
+    <span className="relative inline-flex">
+      <span className="w-2 h-2 rounded-full" style={{backgroundColor:col}}/>
+      {(status==='success'||status==='idle') && (
+        <span className="absolute inset-0 w-2 h-2 rounded-full animate-ping"
+          style={{backgroundColor:col,opacity:0.4}}/>
+      )}
+    </span>
+  )
+}
+
+function KPI({label,value,sub,trendVal,accent=T.teal,sparkVals,onClick,icon:Icon}) {
+  const pos=trendVal>0,neg=trendVal<0
+  return (
+    <div onClick={onClick}
+      className={`relative overflow-hidden rounded-xl p-5 flex flex-col gap-3 transition-all duration-200 ${onClick?'cursor-pointer hover:scale-[1.02]':''}`}
+      style={{background:`linear-gradient(135deg, ${T.bgCard} 0%, ${T.bgMid} 100%)`,border:`1px solid ${T.border}`}}>
+      <div className="absolute top-0 left-0 right-0 h-0.5" style={{background:accent}}/>
       <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconBg}`}>
-          <Icon size={20} className={iconColor} />
+        <div className="flex items-center gap-2">
+          {Icon && (
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{background:accent+'18',border:`1px solid ${accent}30`}}>
+              <Icon size={15} style={{color:accent}}/>
+            </div>
+          )}
+          <span className="text-xs font-medium uppercase tracking-widest"
+            style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>{label}</span>
         </div>
-        {trendVal !== undefined && (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-            trendVal > 0 ? 'bg-green-50 text-green-700' : trendVal < 0 ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'
-          }`}>
-            {trendVal > 0 ? '↑' : trendVal < 0 ? '↓' : '→'} {Math.abs(trendVal)}%
+        {trendVal!==undefined && (
+          <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded"
+            style={{background:pos?T.green+'18':neg?T.red+'18':T.textDim+'40',
+                    color:pos?T.green:neg?T.red:T.textSec}}>
+            {pos?<TrendingUp size={11}/>:neg?<TrendingDown size={11}/>:<Minus size={11}/>}
+            {Math.abs(trendVal)}%
           </span>
         )}
       </div>
       <div>
-        <p className="text-2xl font-bold text-gray-900 leading-tight">{value}</p>
-        <p className="text-xs font-medium text-gray-500 mt-0.5">{label}</p>
+        <div className="text-3xl font-bold leading-none"
+          style={{color:T.textPri,fontFamily:"'DM Mono',monospace",letterSpacing:'-0.02em'}}>{value}</div>
+        {sub&&<div className="text-xs mt-1.5" style={{color:T.textSec}}>{sub}</div>}
       </div>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
+      {sparkVals?.length>1&&<div className="mt-auto"><Spark values={sparkVals} color={accent} h={24} w={90}/></div>}
+      {onClick&&<div className="absolute bottom-3 right-3 opacity-30"><ChevronRight size={14} style={{color:accent}}/></div>}
     </div>
   )
 }
 
-// ── Source card (active sources only) ────────────────────────────────────────
-function SourceCard({ src, syncing, onSync }) {
-  const cfg = SRC_CFG[src.source_type] || SRC_CFG.confluence
-  const isSyncing = syncing === src.source_type
-  const isError = src.sync_status === 'error' || src.sync_status === 'failed'
-  const isOk    = src.sync_status === 'success' || src.sync_status === 'idle'
-
+function SourceTile({src,syncing,onSync}) {
+  const cfg=SRC[src.source_type]||SRC.confluence
+  const isSyncing=syncing===src.source_type
+  const isErr=src.sync_status==='error'||src.sync_status==='failed'
   return (
-    <div className={`bg-white rounded-xl border ${cfg.ring} shadow-sm p-4 flex flex-col gap-3`}>
+    <div className="rounded-xl p-4 flex flex-col gap-3"
+      style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
-          <span className="text-sm font-semibold text-gray-800">{cfg.label}</span>
+          <span className="w-2 h-2 rounded-full" style={{backgroundColor:cfg.dot}}/>
+          <span className="text-sm font-semibold" style={{color:T.textPri}}>{cfg.label}</span>
         </div>
-        <span className={`w-2 h-2 rounded-full ${isError ? 'bg-red-400' : isOk ? 'bg-green-400 animate-pulse' : 'bg-gray-300'}`} />
+        <Beacon status={src.sync_status}/>
       </div>
-
       <div>
-        <p className="text-3xl font-bold text-gray-900">{src.doc_count?.toLocaleString() ?? '—'}</p>
-        <p className="text-xs text-gray-400 mt-0.5">documents indexed</p>
+        <div className="text-2xl font-bold"
+          style={{color:cfg.color,fontFamily:"'DM Mono',monospace",letterSpacing:'-0.02em'}}>
+          {src.doc_count?.toLocaleString()??'—'}
+        </div>
+        <div className="text-xs mt-0.5" style={{color:T.textDim}}>documents</div>
       </div>
-
-      {src.last_sync && (
-        <p className="text-xs text-gray-400 flex items-center gap-1">
-          <Clock size={11} />
-          {format(new Date(src.last_sync), 'MMM d, HH:mm')}
-        </p>
+      {src.last_sync&&(
+        <div className="text-xs flex items-center gap-1" style={{color:T.textDim}}>
+          <Clock size={10}/>{format(new Date(src.last_sync),'MMM d, HH:mm')}
+        </div>
       )}
-
-      {isError && src.error_message && (
-        <p className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 line-clamp-2">{src.error_message}</p>
+      {isErr&&src.error_message&&(
+        <div className="text-xs px-2 py-1.5 rounded"
+          style={{background:T.red+'15',border:`1px solid ${T.red}30`,color:T.red}}>
+          {src.error_message}
+        </div>
       )}
-
-      <button
-        className={`w-full text-xs font-medium py-1.5 rounded-lg border transition-colors flex items-center justify-center gap-1.5 ${
-          isSyncing ? 'bg-gray-50 text-gray-400' : `${cfg.bg} ${cfg.text} border-current`
-        }`}
-        onClick={() => onSync(src.source_type)}
-        disabled={!!syncing}
-      >
-        <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-        {isSyncing ? 'Syncing…' : 'Sync'}
+      <button onClick={()=>onSync(src.source_type)} disabled={!!syncing}
+        className="w-full text-xs font-medium py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all"
+        style={{background:isSyncing?T.border:cfg.color+'15',
+                border:`1px solid ${isSyncing?T.border:cfg.color+'40'}`,
+                color:isSyncing?T.textDim:cfg.color,cursor:syncing?'not-allowed':'pointer'}}>
+        <RefreshCw size={11} className={isSyncing?'animate-spin':''}/>{isSyncing?'Syncing…':'Sync'}
       </button>
     </div>
   )
 }
 
-// ── Top query pill ─────────────────────────────────────────────────────────────
-function QueryPill({ query, count, rank }) {
+function BarDay({day,total,max}) {
+  const pct=total/Math.max(max,1)*100
   return (
-    <div className="flex items-center gap-2 py-1.5">
-      <span className="w-5 h-5 rounded-full bg-teal-50 text-teal-700 text-xs font-bold flex items-center justify-center shrink-0">{rank}</span>
-      <span className="text-sm text-gray-700 flex-1 truncate">{query}</span>
-      <span className="text-xs text-gray-400 font-medium">{count}×</span>
+    <div className="flex flex-col items-center gap-1 flex-1">
+      <span className="text-xs" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>{total||''}</span>
+      <div className="w-full rounded-sm flex flex-col justify-end" style={{height:40}}>
+        <div className="w-full rounded-sm transition-all duration-700"
+          style={{height:`${Math.max(pct,2)}%`,background:`linear-gradient(to top, ${T.tealDk}, ${T.teal})`}}/>
+      </div>
+      <span className="text-xs" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>{day}</span>
     </div>
   )
 }
 
-// ── Main Dashboard ─────────────────────────────────────────────────────────────
+function Shortcut({icon:Icon,label,sub,accent,onClick}) {
+  return (
+    <button onClick={onClick}
+      className="rounded-xl p-3.5 text-left flex items-center gap-3 w-full transition-all duration-150 hover:scale-[1.01] group"
+      style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        style={{background:accent+'18',border:`1px solid ${accent}35`}}>
+        <Icon size={16} style={{color:accent}}/>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold leading-tight" style={{color:T.textPri}}>{label}</div>
+        <div className="text-xs mt-0.5" style={{color:T.textSec}}>{sub}</div>
+      </div>
+      <ChevronRight size={14} className="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity"
+        style={{color:accent}}/>
+    </button>
+  )
+}
+
 export default function Dashboard() {
-  const [data, setData]           = useState(null)
-  const [analytics, setAnalytics] = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [syncing, setSyncing]     = useState(null)
-  const [forceFull, setForceFull] = useState(false)
-  const navigate = useNavigate()
+  const [data,setData]=useState(null)
+  const [analytics,setAnalytics]=useState(null)
+  const [loading,setLoading]=useState(true)
+  const [syncing,setSyncing]=useState(null)
+  const [forceFull,setForceFull]=useState(false)
+  const [tick,setTick]=useState(new Date())
+  const navigate=useNavigate()
 
-  const load = async () => {
+  const load=async()=>{
     try {
-      const [dash, stats] = await Promise.all([
+      const [dash,stats]=await Promise.all([
         getDashboard(),
-        getAnalyticsStats(30).catch(() => ({ data: null })),
+        getAnalyticsStats(30).catch(()=>({data:null})),
       ])
-      setData(dash.data)
-      setAnalytics(stats.data)
-    } catch (e) { console.error(e) }
-    finally { setLoading(false) }
+      setData(dash.data); setAnalytics(stats.data)
+    } catch(e){console.error(e)} finally{setLoading(false)}
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(()=>{load()},[])
+  useEffect(()=>{const t=setInterval(()=>setTick(new Date()),60000);return()=>clearInterval(t)},[])
 
-  const handleSync = async (sourceType) => {
-    setSyncing(sourceType || 'all')
-    try { await triggerSync(sourceType, forceFull); await load() }
-    finally { setSyncing(null) }
+  const goTo=(tab)=>navigate('/intelligence',{state:{tab}})
+  const handleSync=async(src)=>{
+    setSyncing(src||'all')
+    try{await triggerSync(src,forceFull);await load()}finally{setSyncing(null)}
   }
 
-  if (loading) return <div className="flex justify-center items-center h-64"><Spinner /></div>
+  if(loading) return (
+    <div className="flex items-center justify-center h-screen" style={{background:T.bg}}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{background:T.teal+'20',border:`1px solid ${T.teal}40`}}>
+          <Zap size={20} style={{color:T.teal}}/>
+        </div>
+        <div className="text-sm" style={{color:T.textSec}}>Loading…</div>
+      </div>
+    </div>
+  )
 
-  // Filter out servicenow from sources entirely
-  const activeSources = (data?.sources || []).filter(s => s.source_type !== 'servicenow')
-  const total = activeSources.reduce((s, src) => s + (src.doc_count || 0), 0)
-  const searches = analytics?.total_searches ?? 0
-  const zeroResults = analytics?.zero_result_queries?.length ?? 0
-  const topQueries  = analytics?.top_queries?.slice(0, 8) ?? []
-
-  // Recent 7-day search trend from daily_searches
-  const dailyVals = (analytics?.daily_searches || []).slice(-7).map(d => d.count || 0)
-
-  // Health signal: any source with error?
-  const hasError = activeSources.some(s => s.sync_status === 'error' || s.sync_status === 'failed')
-  const lastSync = activeSources.reduce((latest, s) => {
-    if (!s.last_sync) return latest
-    return !latest || new Date(s.last_sync) > new Date(latest) ? s.last_sync : latest
-  }, null)
+  const liveSrcs=(data?.sources||[]).filter(s=>s.source_type!=='servicenow'&&s.source_type!=='sharepoint')
+  const allSrcs=(data?.sources||[]).filter(s=>s.source_type!=='servicenow')
+  const total=liveSrcs.reduce((a,s)=>a+(s.doc_count||0),0)
+  const searches=analytics?.total_searches??0
+  const zeroR=analytics?.zero_result_queries?.length??0
+  const topQ=analytics?.top_queries?.slice(0,8)??[]
+  const daily=analytics?.daily_searches?.slice(-7)??[]
+  const dailyVals=daily.map(d=>d.count||0)
+  const dailyMax=Math.max(...dailyVals,1)
+  const trend=dailyVals.length>3
+    ? Math.round(((dailyVals.slice(-3).reduce((a,b)=>a+b,0)/3)-(dailyVals.slice(0,3).reduce((a,b)=>a+b,0)/3))
+      /Math.max(dailyVals.slice(0,3).reduce((a,b)=>a+b,0)/3,1)*100)
+    : 0
+  const hasErr=liveSrcs.some(s=>s.sync_status==='error'||s.sync_status==='failed')
+  const lastSync=allSrcs.reduce((l,s)=>(!s.last_sync?l:!l||new Date(s.last_sync)>new Date(l)?s.last_sync:l),null)
+  const totalForPct=liveSrcs.reduce((a,s)=>a+(s.doc_count||0),0)
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen" style={{background:T.bg,fontFamily:"'DM Sans',sans-serif"}}>
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Knowledge Hub</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
-            Executive overview · {lastSync ? `Last updated ${formatDistanceToNow(new Date(lastSync), { addSuffix: true })}` : 'Never synced'}
-          </p>
-        </div>
+      {/* Top bar */}
+      <div className="px-6 py-4 flex items-center justify-between"
+        style={{borderBottom:`1px solid ${T.border}`,background:T.bgCard}}>
         <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{background:`linear-gradient(135deg,${T.teal},${T.tealDk})`}}>
+            <Zap size={16} className="text-white"/>
+          </div>
+          <div>
+            <h1 className="text-base font-bold leading-tight" style={{color:T.textPri}}>
+              Knowledge Intelligence Hub
+            </h1>
+            <p className="text-xs" style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>
+              {tick.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
+              {' · '}{lastSync?`Last sync ${formatDistanceToNow(new Date(lastSync),{addSuffix:true})}`:'Not yet synced'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+            style={{background:hasErr?T.red+'15':T.green+'15',border:`1px solid ${hasErr?T.red+'30':T.green+'30'}`}}>
+            {hasErr?<AlertTriangle size={13} style={{color:T.red}}/>:<CheckCircle2 size={13} style={{color:T.green}}/>}
+            <span className="text-xs font-medium" style={{color:hasErr?T.red:T.green}}>
+              {hasErr?'Sync issues':'All healthy'}
+            </span>
+          </div>
           <label className="flex items-center gap-2 cursor-pointer select-none">
-            <div
-              onClick={() => setForceFull(f => !f)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${forceFull ? 'bg-orange-500' : 'bg-gray-200'}`}
-            >
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${forceFull ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            <div onClick={()=>setForceFull(f=>!f)}
+              className="relative w-9 h-5 rounded-full transition-colors"
+              style={{background:forceFull?T.orange:T.border,cursor:'pointer'}}>
+              <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                style={{transform:forceFull?'translateX(1rem)':'translateX(2px)'}}/>
             </div>
-            <span className={`text-xs font-medium ${forceFull ? 'text-orange-600' : 'text-gray-400'}`}>
-              {forceFull ? 'Force Full' : 'Incremental'}
+            <span className="text-xs font-medium" style={{color:forceFull?T.orange:T.textDim}}>
+              {forceFull?'Force Full':'Incremental'}
             </span>
           </label>
-          <button
-            className="btn-primary flex items-center gap-2"
-            onClick={() => handleSync(null)}
-            disabled={!!syncing}
-          >
-            <RefreshCw size={15} className={syncing === 'all' ? 'animate-spin' : ''} />
-            {syncing === 'all' ? 'Syncing…' : 'Sync All'}
+          <button onClick={()=>handleSync(null)} disabled={!!syncing}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={{background:`linear-gradient(135deg,${T.teal},${T.tealDk})`,color:'#fff',opacity:syncing?.6:1}}>
+            <RefreshCw size={14} className={syncing==='all'?'animate-spin':''}/>
+            {syncing==='all'?'Syncing…':'Sync All'}
           </button>
         </div>
       </div>
 
-      {/* ── KPI strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard
-          icon={Database}
-          label="Total Documents"
-          value={total.toLocaleString()}
-          sub={`${activeSources.length} sources active`}
-          iconColor="text-teal-600" iconBg="bg-teal-50"
-        />
-        <KpiCard
-          icon={Search}
-          label="Searches (30 days)"
-          value={searches.toLocaleString()}
-          sub={dailyVals.length > 1 ? 'trend →' : 'start searching to track'}
-          iconColor="text-indigo-600" iconBg="bg-indigo-50"
-          onClick={() => navigate('/intelligence')}
-        />
-        <KpiCard
-          icon={AlertTriangle}
-          label="Zero-Result Queries"
-          value={zeroResults}
-          sub="topics with no answers"
-          iconColor="text-amber-600" iconBg="bg-amber-50"
-          onClick={() => navigate('/intelligence')}
-        />
-        <KpiCard
-          icon={hasError ? AlertTriangle : CheckCircle}
-          label="Sync Health"
-          value={hasError ? 'Issues' : 'Healthy'}
-          sub={hasError ? 'Check source errors below' : 'All sources synced OK'}
-          iconColor={hasError ? 'text-red-600' : 'text-green-600'}
-          iconBg={hasError ? 'bg-red-50' : 'bg-green-50'}
-        />
-      </div>
+      <div className="p-6 space-y-5">
 
-      {/* ── Two columns: sources + analytics ── */}
-      <div className="grid md:grid-cols-5 gap-5">
-
-        {/* Sources (3 cols) */}
-        <div className="md:col-span-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Active Sources</h2>
-            {/* SharePoint future badge */}
-            <span className="text-xs text-blue-500 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
-              SharePoint — roadmap Q2
-            </span>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {activeSources
-              .filter(s => s.source_type !== 'sharepoint')
-              .map(src => (
-                <SourceCard key={src.source_type} src={src} syncing={syncing} onSync={handleSync} />
-              ))
-            }
-            {/* SharePoint — future */}
-            <div className="bg-white rounded-xl border border-dashed border-blue-200 p-4 flex flex-col gap-3 opacity-60">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-                <span className="text-sm font-semibold text-gray-500">SharePoint</span>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-gray-300">—</p>
-                <p className="text-xs text-gray-400 mt-0.5">Azure AD setup required</p>
-              </div>
-              <span className="text-xs text-blue-500 font-medium">IT action · Q2 roadmap</span>
-            </div>
-          </div>
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPI label="Total Documents" value={total.toLocaleString()}
+            sub={`${liveSrcs.length} live sources`} accent={T.teal}
+            sparkVals={liveSrcs.map(s=>s.doc_count||0)} icon={Database}/>
+          <KPI label="Searches / 30d" value={searches.toLocaleString()}
+            sub="Knowledge queries" trendVal={trend} accent={T.purple}
+            sparkVals={dailyVals} icon={Search} onClick={()=>goTo('analytics')}/>
+          <KPI label="Zero-Result Gaps" value={zeroR}
+            sub="Unanswered queries" accent={zeroR>0?T.orange:T.green}
+            icon={zeroR>0?AlertTriangle:CheckCircle2} onClick={()=>goTo('gaps')}/>
+          <KPI label="At-Risk Experts" value={data?.experts_at_risk??'—'}
+            sub="Inactive or vendor-only" accent={T.red}
+            icon={Users} onClick={()=>goTo('experts')}/>
         </div>
 
-        {/* Analytics (2 cols) */}
-        <div className="md:col-span-2 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Search Analytics</h2>
+        {/* Main grid */}
+        <div className="grid grid-cols-12 gap-4">
 
-          {/* Sparkline card */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <p className="text-xs text-gray-400 font-medium">7-day search volume</p>
-                <p className="text-xl font-bold text-gray-900 mt-0.5">
-                  {dailyVals.reduce((a,b) => a+b, 0)} queries
-                </p>
+          {/* Sources (5 cols) */}
+          <div className="col-span-12 lg:col-span-5 space-y-4">
+
+            {/* Composition bar */}
+            <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold uppercase tracking-widest"
+                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>Source Composition</span>
+                <span className="text-xs" style={{color:T.textDim}}>{total.toLocaleString()} total</span>
               </div>
-              <Sparkline values={dailyVals} color="#0d9488" />
+              <div className="flex h-2 rounded-full overflow-hidden gap-px mb-4">
+                {liveSrcs.map((s,i)=>{
+                  const cfg=SRC[s.source_type]||SRC.confluence
+                  const pct=((s.doc_count||0)/Math.max(totalForPct,1))*100
+                  return pct>0?(
+                    <div key={i} className="h-full transition-all duration-700"
+                      style={{width:`${pct}%`,background:cfg.color,minWidth:4}}/>
+                  ):null
+                })}
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {liveSrcs.map((s,i)=>{
+                  const cfg=SRC[s.source_type]||SRC.confluence
+                  const pct=((s.doc_count||0)/Math.max(totalForPct,1)*100).toFixed(0)
+                  return (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full" style={{background:cfg.dot}}/>
+                      <span className="text-xs" style={{color:T.textSec}}>{cfg.label}</span>
+                      <span className="text-xs font-semibold"
+                        style={{color:T.textPri,fontFamily:"'DM Mono',monospace"}}>{pct}%</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            {analytics?.daily_searches?.slice(-7).map((d, i) => (
-              <div key={i} className="flex items-center gap-2 py-0.5">
-                <span className="text-xs text-gray-400 w-14 shrink-0">{format(new Date(d.date), 'EEE d')}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                  <div
-                    className="bg-teal-400 h-1.5 rounded-full"
-                    style={{ width: `${Math.min((d.count / Math.max(...dailyVals, 1)) * 100, 100)}%` }}
-                  />
+
+            {/* Source tiles */}
+            <div className="grid grid-cols-2 gap-3">
+              {liveSrcs.map(src=>(
+                <SourceTile key={src.source_type} src={src} syncing={syncing} onSync={handleSync}/>
+              ))}
+              <div className="rounded-xl p-4 flex flex-col gap-3"
+                style={{background:T.bgCard,border:`1px dashed ${T.borderLt}`,opacity:0.45}}>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"/>
+                  <span className="text-sm font-semibold" style={{color:T.textSec}}>SharePoint</span>
                 </div>
-                <span className="text-xs text-gray-500 w-5 text-right">{d.count}</span>
+                <div className="text-2xl font-bold" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>—</div>
+                <span className="text-xs" style={{color:'#3b82f6'}}>Q2 2026 · Azure AD required</span>
               </div>
-            ))}
-            {(!analytics?.daily_searches?.length) && (
-              <p className="text-xs text-gray-400 text-center py-3">No searches yet — data appears as team uses EKM</p>
+            </div>
+          </div>
+
+          {/* Analytics (4 cols) */}
+          <div className="col-span-12 lg:col-span-4 space-y-4">
+
+            {/* Bar chart */}
+            <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold uppercase tracking-widest"
+                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>7-Day Search Volume</span>
+                <span className="text-xs font-bold"
+                  style={{color:T.teal,fontFamily:"'DM Mono',monospace"}}>
+                  {dailyVals.reduce((a,b)=>a+b,0)}
+                </span>
+              </div>
+              {daily.length>0?(
+                <div className="flex items-end gap-1.5" style={{height:56}}>
+                  {daily.map((d,i)=>(
+                    <BarDay key={i} day={format(new Date(d.date),'EEE').slice(0,1)}
+                      total={d.count||0} max={dailyMax}/>
+                  ))}
+                </div>
+              ):(
+                <div className="flex items-center justify-center" style={{height:56}}>
+                  <span className="text-xs" style={{color:T.textDim}}>No data yet</span>
+                </div>
+              )}
+            </div>
+
+            {/* Top queries */}
+            <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-widest"
+                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>Top Queries</span>
+                <button onClick={()=>goTo('analytics')}
+                  className="text-xs flex items-center gap-0.5 hover:opacity-80"
+                  style={{color:T.teal}}>all<ChevronRight size={11}/></button>
+              </div>
+              {topQ.length>0?(
+                <div className="space-y-2">
+                  {topQ.map((q,i)=>(
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded flex items-center justify-center text-xs font-bold shrink-0"
+                        style={{background:T.teal+'20',color:T.teal,fontFamily:"'DM Mono',monospace"}}>
+                        {i+1}
+                      </span>
+                      <span className="text-sm flex-1 truncate" style={{color:T.textPri}}>{q.query}</span>
+                      <span className="text-xs shrink-0" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>
+                        {q.count}×
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ):(
+                <div className="py-3 text-center text-xs" style={{color:T.textDim}}>
+                  No queries yet
+                </div>
+              )}
+            </div>
+
+            {/* Spark by source */}
+            <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
+              <span className="text-xs font-semibold uppercase tracking-widest block mb-3"
+                style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>Docs by Source</span>
+              <div className="space-y-2.5">
+                {liveSrcs.map((s,i)=>{
+                  const cfg=SRC[s.source_type]||SRC.confluence
+                  const pct=((s.doc_count||0)/Math.max(total,1)*100)
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-xs w-20 shrink-0" style={{color:T.textSec}}>{cfg.label}</span>
+                      <div className="flex-1 h-1.5 rounded-full" style={{background:T.border}}>
+                        <div className="h-1.5 rounded-full transition-all duration-700"
+                          style={{width:`${pct}%`,background:cfg.color}}/>
+                      </div>
+                      <span className="text-xs w-12 text-right shrink-0"
+                        style={{color:T.textPri,fontFamily:"'DM Mono',monospace"}}>
+                        {(s.doc_count||0).toLocaleString()}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Intelligence shortcuts (3 cols) */}
+          <div className="col-span-12 lg:col-span-3 space-y-3">
+            <span className="text-xs font-semibold uppercase tracking-widest block"
+              style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>
+              Intelligence
+            </span>
+            <Shortcut icon={AlertTriangle} label="Risk & Vendors"    sub="Dependency alerts"      accent={T.red}    onClick={()=>goTo('risk')}/>
+            <Shortcut icon={TrendingUp}    label="Velocity"          sub="12-month activity"      accent={T.teal}   onClick={()=>goTo('velocity')}/>
+            <Shortcut icon={Users}         label="Experts At Risk"   sub="Inactive SMEs"          accent={T.orange} onClick={()=>goTo('experts')}/>
+            <Shortcut icon={Activity}      label="Coverage Score"    sub="Grade A–F by system"    accent={T.gold}   onClick={()=>goTo('coverage')}/>
+            <Shortcut icon={FileText}      label="Knowledge Gaps"    sub="Undocumented systems"   accent={T.purple} onClick={()=>goTo('gaps')}/>
+            <Shortcut icon={CheckCircle2}  label="Health Report"     sub="Freshness & audit"      accent={T.green}  onClick={()=>goTo('health')}/>
+            {zeroR>0&&(
+              <div className="rounded-xl p-3 flex items-start gap-2"
+                style={{background:T.orange+'12',border:`1px solid ${T.orange}30`}}>
+                <AlertTriangle size={13} style={{color:T.orange,marginTop:2}}/>
+                <div>
+                  <div className="text-xs font-semibold" style={{color:T.orange}}>
+                    {zeroR} unanswered topic{zeroR!==1?'s':''}
+                  </div>
+                  <button onClick={()=>goTo('gaps')} className="text-xs mt-1 underline" style={{color:T.orange}}>
+                    View gaps →
+                  </button>
+                </div>
+              </div>
             )}
           </div>
-
-          {/* Top queries */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-400 font-medium">Top search queries</p>
-              <button onClick={() => navigate('/intelligence')} className="text-xs text-teal-600 hover:underline">
-                View all →
-              </button>
-            </div>
-            {topQueries.length > 0
-              ? topQueries.map((q, i) => <QueryPill key={i} query={q.query} count={q.count} rank={i+1} />)
-              : <p className="text-xs text-gray-400 py-3 text-center">No queries yet</p>
-            }
-          </div>
         </div>
       </div>
-
-      {/* ── Intelligence shortcuts ── */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Intelligence Shortcuts</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { icon: AlertTriangle, label: 'Risk & Vendors',    sub: 'Vendor dependency alerts',      color: 'text-red-600',    bg: 'bg-red-50',    tab: 'risk'      },
-            { icon: TrendingUp,    label: 'Knowledge Velocity',sub: '12-month activity trend',       color: 'text-teal-600',   bg: 'bg-teal-50',   tab: 'velocity'  },
-            { icon: Users,         label: 'Experts At Risk',   sub: 'Inactive SMEs & vendors',       color: 'text-amber-600',  bg: 'bg-amber-50',  tab: 'experts'   },
-            { icon: FileText,      label: 'Coverage Score',    sub: 'Documentation grade A–F',       color: 'text-indigo-600', bg: 'bg-indigo-50', tab: 'coverage'  },
-          ].map(item => (
-            <button
-              key={item.tab}
-              onClick={() => navigate('/intelligence')}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-left hover:border-teal-300 transition-colors group"
-            >
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${item.bg} mb-3`}>
-                <item.icon size={18} className={item.color} />
-              </div>
-              <p className="text-sm font-semibold text-gray-800 group-hover:text-teal-700">{item.label}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
     </div>
   )
 }

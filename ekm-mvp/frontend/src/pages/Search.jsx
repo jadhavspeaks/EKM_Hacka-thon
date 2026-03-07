@@ -28,66 +28,57 @@ function SMEPanel({ smes }) {
   const maxScore = smes[0]?.score || 1
 
   return (
-    <div className="card p-4 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
-          <User size={14} className="text-white" />
+    <div className="rounded-xl overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)', border: '1px solid rgba(129,140,248,0.25)', boxShadow: '0 0 32px rgba(129,140,248,0.12)' }}>
+      <div className="px-4 py-3 flex items-center gap-2.5"
+        style={{ background: 'linear-gradient(90deg, rgba(129,140,248,0.15) 0%, transparent 100%)', borderBottom: '1px solid rgba(129,140,248,0.12)' }}>
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+          style={{ background: 'rgba(129,140,248,0.25)', border: '1px solid rgba(129,140,248,0.4)' }}>
+          <User size={12} className="text-indigo-300" />
         </div>
-        <span className="font-semibold text-indigo-800 text-sm">Best People To Ask</span>
-        <span className="ml-auto text-xs text-gray-400">ranked by topic expertise</span>
+        <span className="text-sm font-bold text-indigo-200">Best People To Ask</span>
+        <span className="ml-auto text-xs text-indigo-400/60 font-medium">ranked by expertise</span>
+        <span className="text-xs px-1.5 py-0.5 rounded font-bold text-indigo-300 bg-indigo-500/20 border border-indigo-500/30">AI</span>
       </div>
-
-      <div className="space-y-3">
-        {smes.map((sme, i) => {
+      <div className="divide-y divide-white/5">
+        {smes.slice(0, 5).map((sme, i) => {
           const barWidth = Math.round((sme.score / maxScore) * 100)
           const b = sme.contribution_breakdown || {}
-
+          const medals = ["🥇","🥈","🥉"]
+          const isVendor = sme.type === "vendor"
           return (
-            <div key={sme.name} className="flex items-start gap-3">
-              {/* Rank badge */}
-              <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                ${i === 0 ? 'bg-yellow-400 text-yellow-900' :
-                  i === 1 ? 'bg-gray-300 text-gray-700' :
-                  i === 2 ? 'bg-orange-300 text-orange-800' :
-                  'bg-gray-100 text-gray-500'}`}>
-                {i === 0 ? <Star size={12}/> : i + 1}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                {/* Name + score */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-gray-900 text-sm truncate">{sme.name}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{sme.doc_count} docs</span>
+            <div key={sme.name} className="px-4 py-3 hover:bg-white/[0.03] transition-colors">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold mt-0.5"
+                  style={{ background: i < 3 ? "rgba(129,140,248,0.15)" : "rgba(255,255,255,0.05)", border: i < 3 ? "1px solid rgba(129,140,248,0.25)" : "1px solid rgba(255,255,255,0.08)" }}>
+                  {i < 3 ? medals[i] : <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{i+1}</span>}
                 </div>
-
-                {/* Score bar */}
-                <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${i === 0 ? 'bg-indigo-500' : 'bg-indigo-300'}`}
-                    style={{ width: `${barWidth}%` }}
-                  />
-                </div>
-
-                {/* Role tags */}
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {sme.roles.map(role => (
-                    <span key={role} className="text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                      {ROLE_ICONS[role] || '•'} {role}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Contribution breakdown */}
-                <div className="flex gap-3 mt-1">
-                  {b.authored  > 0 && <span className="text-xs text-gray-400">{b.authored} authored</span>}
-                  {b.reported  > 0 && <span className="text-xs text-gray-400">{b.reported} reported</span>}
-                  {b.assigned  > 0 && <span className="text-xs text-gray-400">{b.assigned} assigned</span>}
-                  {b.commented > 0 && <span className="text-xs text-gray-400">{b.commented} comments</span>}
-                  {b.resolved  > 0 && <span className="text-xs text-gray-400">{b.resolved} resolved</span>}
-                  {sme.last_active && (
-                    <span className="text-xs text-gray-400 ml-auto">
-                      last active {sme.last_active}
-                    </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-white/90 truncate">{sme.name}</span>
+                    {isVendor
+                      ? <span className="text-xs px-1.5 py-0.5 rounded font-semibold text-orange-300 bg-orange-500/15 border border-orange-500/25 shrink-0">Vendor</span>
+                      : <span className="text-xs px-1.5 py-0.5 rounded font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 shrink-0">Internal</span>
+                    }
+                    <span className="ml-auto text-xs text-white/30 shrink-0">{sme.doc_count} docs</span>
+                  </div>
+                  <div className="mt-1.5 h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: i === 0 ? "linear-gradient(90deg, #818cf8, #a78bfa)" : "rgba(129,140,248,0.4)" }} />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {b.authored  > 0 && <span className="text-xs text-indigo-300/70 bg-indigo-500/10 px-1.5 py-0.5 rounded">{b.authored} authored</span>}
+                    {b.assigned  > 0 && <span className="text-xs text-purple-300/70 bg-purple-500/10 px-1.5 py-0.5 rounded">{b.assigned} assigned</span>}
+                    {b.commented > 0 && <span className="text-xs text-blue-300/70 bg-blue-500/10 px-1.5 py-0.5 rounded">{b.commented} comments</span>}
+                    {sme.last_active && <span className="ml-auto text-xs text-white/20">{sme.last_active}</span>}
+                  </div>
+                  {sme.roles?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {sme.roles.map(r => (
+                        <span key={r} className="text-xs text-indigo-400/60 bg-indigo-500/[0.08] px-1.5 py-0.5 rounded-full">
+                          {ROLE_ICONS[r] || "•"} {r}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -98,7 +89,6 @@ function SMEPanel({ smes }) {
     </div>
   )
 }
-
 // ── Best Answer Panel ─────────────────────────────────────────────────────────
 function BestAnswerPanel({ answer }) {
   if (!answer) return null
@@ -172,13 +162,21 @@ function ResultCard({ doc }) {
   const [expanded, setExpanded] = useState(false)
   const m = doc.metadata || {}
   const priorityColor = PRIORITY_COLORS[(m.priority || '').toLowerCase()] || 'bg-gray-100 text-gray-500'
+  const isConfluence = doc.source_type === 'confluence'
 
   return (
-    <div className="card overflow-hidden">
+    <div className={`card overflow-hidden transition-shadow hover:shadow-md ${
+      isConfluence ? 'border-l-4 border-l-purple-400 bg-gradient-to-r from-purple-50/50 to-white' : ''
+    }`}>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <SourceBadge type={doc.source_type} />
+            {isConfluence && (
+              <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
+                📖 Recommended
+              </span>
+            )}
             {m.status   && <span className="badge bg-gray-100 text-gray-600 text-xs">{m.status}</span>}
             {m.priority && <span className={`badge text-xs ${priorityColor}`}>{m.priority}</span>}
             {m.issue_type && <span className="badge bg-blue-50 text-blue-600 text-xs">{m.issue_type}</span>}
@@ -189,7 +187,9 @@ function ResultCard({ doc }) {
           </a>
         </div>
 
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1">{doc.title}</h3>
+        <h3 className={`font-semibold text-sm leading-snug mb-1 ${isConfluence ? 'text-purple-900' : 'text-gray-900'}`}>
+          {doc.title}
+        </h3>
 
         <p className="text-xs text-gray-400 mb-2">
           {doc.source}
@@ -532,18 +532,61 @@ export default function SearchPage() {
 
           {/* Best Answer + SME side by side on wide screens */}
           {(results.best_answer || results.smes?.length > 0) && (
-            <div className="grid md:grid-cols-2 gap-4">
-              <BestAnswerPanel answer={results.best_answer} />
-              <SMEPanel smes={results.smes} />
+            <div className="space-y-4">
+              {results.smes?.length > 0 && <SMEPanel smes={results.smes} />}
+              {results.best_answer && <BestAnswerPanel answer={results.best_answer} />}
             </div>
           )}
 
-          {/* Results */}
+          {/* Results — Confluence docs shown first as Documentation */}
           {results.results?.length === 0
             ? <EmptyState icon="🔍" title="No results" subtitle="Try different keywords or remove the source filter."/>
-            : <div className="space-y-3">
-                {results.results.map(doc => doc.source_type === 'github' ? <GitHubCard key={doc.id} doc={doc}/> : <ResultCard key={doc.id} doc={doc}/>)}
-              </div>
+            : (() => {
+                const sorted = [...results.results].sort((a, b) => {
+                  if (a.source_type === 'confluence' && b.source_type !== 'confluence') return -1
+                  if (b.source_type === 'confluence' && a.source_type !== 'confluence') return 1
+                  return 0
+                })
+                const confDocs  = sorted.filter(d => d.source_type === 'confluence')
+                const otherDocs = sorted.filter(d => d.source_type !== 'confluence')
+                return (
+                  <div className="space-y-4">
+                    {confDocs.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <div className="w-1 h-4 rounded-full bg-purple-500"/>
+                          <span className="text-xs font-bold text-purple-700 uppercase tracking-widest">
+                            Official Documentation
+                          </span>
+                          <span className="text-xs text-gray-400 ml-1">{confDocs.length} result{confDocs.length!==1?'s':''} · Confluence</span>
+                        </div>
+                        <div className="space-y-2.5">
+                          {confDocs.map(doc => <ResultCard key={doc.id} doc={doc}/>)}
+                        </div>
+                      </div>
+                    )}
+                    {otherDocs.length > 0 && (
+                      <div>
+                        {confDocs.length > 0 && (
+                          <div className="flex items-center gap-2 mb-2.5 mt-1">
+                            <div className="w-1 h-4 rounded-full bg-gray-300"/>
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                              Related Activity
+                            </span>
+                            <span className="text-xs text-gray-400 ml-1">{otherDocs.length} result{otherDocs.length!==1?'s':''}</span>
+                          </div>
+                        )}
+                        <div className="space-y-2.5">
+                          {otherDocs.map(doc => doc.source_type === 'github'
+                            ? <GitHubCard key={doc.id} doc={doc}/>
+                            : <ResultCard key={doc.id} doc={doc}/>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()
           }
 
           {/* Pagination */}

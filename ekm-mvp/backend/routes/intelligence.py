@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["intelligence"])
 
 # ── Simple TTL in-memory cache (5 min) ───────────────────────────────────────
 _CACHE: dict[str, tuple[float, any]] = {}
-_CACHE_TTL = 300  # seconds
+_CACHE_TTL = 600  # 10 minutes — most intelligence data changes slowly
 
 def _cache_get(key: str):
     if key in _CACHE:
@@ -32,24 +32,20 @@ def _cache_set(key: str, val):
     _CACHE[key] = (time.time(), val)
     return val
 
-VENDOR_PATTERN   = re.compile(r'\[TECH\s+NE\]|\bNE\s*$|\[NE\]', re.IGNORECASE)
-INTERNAL_PATTERN = re.compile(r'\[TECH\](?!\s*NE)', re.IGNORECASE)
+VENDOR_PATTERN   = re.compile(r'\[[^\]]*\bNE\]|\bNE\s*$', re.IGNORECASE)
+INTERNAL_PATTERN = re.compile(r'\[[^\]]*\bTECH\b[^\]]*\]', re.IGNORECASE)
 
 
 def _classify(name: str) -> str:
     """
-    Vendor if: [TECH NE] OR name ends with ' NE' OR [NE]
-    Internal if: [TECH] (without NE suffix)
-    Examples:
-      'Jadhav, Nishantchandra [TECH]'  → internal
-      'ICG-IT NE'                 → vendor  (bare NE suffix)
-      'ICG IT [TECH]'             → internal
-      'Jadhav, Nishantchandra [TECH]' → internal
+    Vendor: ANY bracket ending in NE, or bare NE suffix.
+      [TECH NE], [ICG-IT NE], [ICG NE], [NE] -> vendor
+    Internal: TECH bracket without NE -> internal
     """
-    n = (name or "").strip()
+    n = (name or '').strip()
     if VENDOR_PATTERN.search(n):
         return "vendor"
-    if INTERNAL_PATTERN.search(n):
+    if INTERNAL_PATTERN.search(n) and not VENDOR_PATTERN.search(n):
         return "internal"
     return "unknown"
 
@@ -554,6 +550,8 @@ async def get_knowledge_gaps():
 
 @router.get("/experts-at-risk")
 async def get_experts_at_risk():
+    cached = _cache_get("experts")
+    if cached: return cached
     """
     SMEs whose knowledge is at risk: inactive 90d+, vendors, or sole topic owners.
     """
@@ -660,12 +658,12 @@ async def get_experts_at_risk():
     risk_order = {"critical": 0, "high": 1, "medium": 2}
     at_risk.sort(key=lambda x: (risk_order[x["risk_level"]], -x["doc_count"]))
 
-    return {
+    return _cache_set("experts", {
         "total_at_risk":  len(at_risk),
         "critical_count": sum(1 for p in at_risk if p["risk_level"] == "critical"),
         "high_count":     sum(1 for p in at_risk if p["risk_level"] == "high"),
         "experts":        at_risk[:30],
-    }
+    })
 
 
 # ── Documentation Coverage Score ─────────────────────────────────────────────

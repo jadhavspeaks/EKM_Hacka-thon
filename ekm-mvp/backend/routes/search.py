@@ -211,6 +211,18 @@ async def search(
 
     # ── Step 3: BM25 re-ranking ───────────────────────────────────────────────
     ranked = rerank_bm25(q, all_candidates)
+
+    # ── Step 3b: Confluence-first boost ──────────────────────────────────────
+    # Confluence docs surface first — structured documentation > tickets/code
+    # Boost: confluence docs get a +0.15 score multiplier on top of BM25
+    SOURCE_BOOST = {"confluence": 1.20, "sharepoint": 1.10, "github": 1.0, "jira": 0.95}
+    for doc in ranked:
+        boost = SOURCE_BOOST.get(doc.get("source_type", ""), 1.0)
+        if "_score" in doc:
+            doc["_score"] = doc["_score"] * boost
+    # Re-sort after boost — stable sort preserves BM25 order within same score
+    ranked.sort(key=lambda d: d.get("_score", 0), reverse=True)
+
     total  = len(ranked)
 
     # ── Step 4: SME ranking (across ALL matched docs, not just current page) ──

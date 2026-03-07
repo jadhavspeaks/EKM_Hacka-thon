@@ -16,51 +16,60 @@ const NAV = [
 
 function AppShell() {
   const location = useLocation()
-  const isIntelligence = location.pathname === '/intelligence'
+  const isDash = location.pathname === '/'
+  const isFull = location.pathname === '/' || location.pathname === '/intelligence'
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <aside className="w-56 flex flex-col shrink-0" style={{ backgroundColor: "#1e3a5f" }}>
-        <div className="px-5 py-5 border-b border-white/10">
+    <div className="flex h-screen overflow-hidden" style={{background:'#07111f'}}>
+      <aside className="w-56 flex flex-col shrink-0" style={{background:'#0a1628', borderRight:'1px solid #1a3050'}}>
+        <div className="px-5 py-5" style={{borderBottom:'1px solid #1a3050'}}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{background:'linear-gradient(135deg,#00d4aa,#00a88a)'}}>
               <Brain size={18} className="text-white" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-tight">EKM</p>
-              <p className="text-white/50 text-xs">Knowledge Hub</p>
+              <p className="font-bold text-sm leading-tight" style={{color:'#e2eaf4'}}>EKM</p>
+              <p className="text-xs" style={{color:'#3d5a7a'}}>Knowledge Hub</p>
             </div>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === "/"}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-teal-500 text-white" : "text-white/60 hover:text-white hover:bg-white/10"
+                  isActive
+                    ? 'text-white'
+                    : 'hover:text-white'
                 }`
               }
+              style={({ isActive }) => ({
+                background: isActive ? 'rgba(0,212,170,0.15)' : 'transparent',
+                color: isActive ? '#00d4aa' : '#6b8aad',
+                border: isActive ? '1px solid rgba(0,212,170,0.25)' : '1px solid transparent',
+              })}
             >
               <Icon size={17} />
               {label}
             </NavLink>
           ))}
         </nav>
-        <div className="px-5 py-4 border-t border-white/10">
+        <div className="px-5 py-4" style={{borderTop:'1px solid #1a3050'}}>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-            <span className="text-white/50 text-xs">MVP v3.0</span>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{background:'#00d4aa'}} />
+            <span className="text-xs" style={{color:'#3d5a7a'}}>MVP v3.0</span>
           </div>
-          <p className="text-white/30 text-xs">
-            Press <kbd className="bg-white/10 px-1 rounded text-white/50">/</kbd> to search anywhere
+          <p className="text-xs" style={{color:'#3d5a7a'}}>
+            Press <kbd className="px-1 rounded text-xs" style={{background:'#1a3050',color:'#6b8aad'}}>/</kbd> to search
           </p>
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto flex flex-col">
         <Routes>
           <Route path="/intelligence" element={<Intelligence />} />
-          <Route path="/" element={<div className="max-w-6xl mx-auto p-6 w-full"><Dashboard /></div>} />
-          <Route path="/search" element={<div className="max-w-6xl mx-auto p-6 w-full"><SearchPage /></div>} />
-          <Route path="/documents" element={<div className="max-w-6xl mx-auto p-6 w-full"><Documents /></div>} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/search"    element={<div className="max-w-6xl mx-auto p-6 w-full bg-gray-50 min-h-full"><SearchPage /></div>} />
+          <Route path="/documents" element={<div className="max-w-6xl mx-auto p-6 w-full bg-gray-50 min-h-full"><Documents /></div>} />
         </Routes>
       </main>
     </div>
