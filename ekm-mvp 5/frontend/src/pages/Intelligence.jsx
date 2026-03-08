@@ -120,7 +120,7 @@ function AnalyticsTab() {
             <p className="text-xs text-slate-500 mt-0.5">Indexed documents across all connected sources</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-slate-800" style={{fontFamily:"'DM Mono',monospace"}}>
+            <div className="text-2xl font-bold text-slate-800" style={{fontFamily:"'IBM Plex Mono',monospace"}}>
               {totalDocs.toLocaleString()}
             </div>
             <div className="text-xs text-slate-400">total documents</div>
@@ -144,7 +144,7 @@ function AnalyticsTab() {
                     {pct}%
                   </span>
                 </div>
-                <div className="text-2xl font-bold text-slate-800" style={{fontFamily:"'DM Mono',monospace"}}>
+                <div className="text-2xl font-bold text-slate-800" style={{fontFamily:"'IBM Plex Mono',monospace"}}>
                   {(s.doc_count || 0).toLocaleString()}
                 </div>
                 <div className="text-xs text-slate-500 mt-1">docs · synced {lastSync}</div>
@@ -177,7 +177,7 @@ function AnalyticsTab() {
                 <div key={s.source_type} className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-sm" style={{ background: cfg.color }} />
                   <span className="text-xs text-slate-600">{cfg.label}</span>
-                  <span className="text-xs font-semibold text-slate-800" style={{fontFamily:"'DM Mono',monospace"}}>
+                  <span className="text-xs font-semibold text-slate-800" style={{fontFamily:"'IBM Plex Mono',monospace"}}>
                     {(s.doc_count || 0).toLocaleString()} <span className="text-slate-400 font-normal">({pct}%)</span>
                   </span>
                 </div>
@@ -222,28 +222,28 @@ function AnalyticsTab() {
             {/* KPI strip */}
             <div className="grid grid-cols-4 gap-3">
               <div className="card p-4">
-                <div className="text-2xl font-bold text-teal-600" style={{fontFamily:"'DM Mono',monospace"}}>
+                <div className="text-2xl font-bold text-teal-600" style={{fontFamily:"'IBM Plex Mono',monospace"}}>
                   {data.total_searches.toLocaleString()}
                 </div>
                 <div className="text-xs font-medium text-slate-700 mt-1">Total Searches</div>
                 <div className="text-xs text-slate-400">{data.days}-day window</div>
               </div>
               <div className="card p-4">
-                <div className="text-2xl font-bold text-blue-600" style={{fontFamily:"'DM Mono',monospace"}}>
+                <div className="text-2xl font-bold text-blue-600" style={{fontFamily:"'IBM Plex Mono',monospace"}}>
                   {data.unique_queries?.toLocaleString()}
                 </div>
                 <div className="text-xs font-medium text-slate-700 mt-1">Unique Queries</div>
                 <div className="text-xs text-slate-400">distinct searches</div>
               </div>
               <div className={`card p-4 border ${healthColor}`}>
-                <div className={`text-2xl font-bold ${healthColor.split(' ')[0]}`} style={{fontFamily:"'DM Mono',monospace"}}>
+                <div className={`text-2xl font-bold ${healthColor.split(' ')[0]}`} style={{fontFamily:"'IBM Plex Mono',monospace"}}>
                   {zeroRate}%
                 </div>
                 <div className="text-xs font-medium text-slate-700 mt-1">Zero-Result Rate</div>
                 <div className="text-xs text-slate-400">{data.zero_result_count} unanswered</div>
               </div>
               <div className="card p-4">
-                <div className="text-2xl font-bold text-purple-600" style={{fontFamily:"'DM Mono',monospace"}}>
+                <div className="text-2xl font-bold text-purple-600" style={{fontFamily:"'IBM Plex Mono',monospace"}}>
                   {data.total_searches > 0 ? (data.total_searches / data.days).toFixed(1) : '0'}
                 </div>
                 <div className="text-xs font-medium text-slate-700 mt-1">Avg / Day</div>
@@ -1625,14 +1625,14 @@ export default function Intelligence() {
   return (
     <div className="flex gap-0 h-full min-h-screen" style={{height:'calc(100vh - 0px)'}}>
       {/* ── Sidebar ── */}
-      <aside className="w-56 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col pt-5 pb-8 overflow-y-auto">
+      <aside className="w-56 shrink-0 flex flex-col pt-5 pb-8 overflow-y-auto" style={{background:"#ffffff",borderRight:"1px solid #dde3ec"}}>
         <div className="px-4 mb-5">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Intelligence</p>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{color:"#8896a7",fontFamily:"'IBM Plex Mono',monospace"}}>Intelligence</p>
         </div>
 
         {NAV_GROUPS.map(group => (
           <div key={group.group} className="mb-5">
-            <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            <p className="px-4 text-xs font-semibold uppercase tracking-wider mb-1" style={{color:"#aab4c0",fontFamily:"'IBM Plex Mono',monospace"}}>
               {group.group}
             </p>
             {group.items.map(item => {
@@ -1641,16 +1641,17 @@ export default function Intelligence() {
                 <button
                   key={item.id}
                   onClick={() => setTab(item.id)}
+                  style={active ? {background:'#eff6ff',borderLeft:'3px solid #0052cc',paddingLeft:'13px'} : {borderLeft:'3px solid transparent'}}
                   className={`w-full text-left px-4 py-2.5 flex items-start gap-2.5 transition-colors ${
                     active
-                      ? 'bg-teal-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <span className="text-base leading-none mt-0.5">{item.icon}</span>
                   <span>
                     <span className="block text-sm font-medium leading-tight">{item.label}</span>
-                    <span className={`block text-xs leading-tight mt-0.5 ${active ? 'text-teal-100' : 'text-slate-500'}`}>
+                    <span className={`block text-xs leading-tight mt-0.5 ${active ? 'text-blue-500' : 'text-gray-400'}`}>
                       {item.sub}
                     </span>
                   </span>
@@ -1662,10 +1663,10 @@ export default function Intelligence() {
       </aside>
 
       {/* ── Content area ── */}
-      <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+      <main className="flex-1 overflow-y-auto p-6" style={{background:"#f4f6f9"}}>
         {/* Content header */}
-        <div className="mb-5 pb-4 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">{meta.title}</h1>
+        <div className="mb-5 pb-4" style={{borderBottom:"1px solid #dde3ec"}}>
+          <h1 className="text-xl font-bold" style={{color:"#0d1117",fontFamily:"'IBM Plex Sans',sans-serif"}}>{meta.title}</h1>
           <p className="text-sm text-gray-400 mt-0.5">{meta.desc}</p>
         </div>
 

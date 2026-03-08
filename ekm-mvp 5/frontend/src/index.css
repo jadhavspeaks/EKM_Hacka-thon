@@ -11,7 +11,7 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+    @apply bg-white rounded-xl; border: 1px solid #dde3ec; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .btn-primary {
     @apply bg-teal-500 hover:bg-teal-600 text-white font-medium px-4 py-2 rounded-lg transition-colors;

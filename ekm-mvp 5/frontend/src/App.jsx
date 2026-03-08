@@ -24,7 +24,7 @@ const NAV = [
 
 function AppShell() {
   return (
-    <div className="flex h-screen overflow-hidden" style={{background:'#f4f6f9'}}>
+    <div className="flex h-screen overflow-hidden" style={{background:'#f4f6f9',fontFamily:"'IBM Plex Sans',sans-serif"}}>
 
       {/* ── Sidebar ── */}
       <aside className="w-56 flex flex-col shrink-0"

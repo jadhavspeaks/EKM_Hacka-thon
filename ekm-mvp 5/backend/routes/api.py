@@ -43,6 +43,7 @@ async def trigger_sync(body: SyncRequest = SyncRequest(), background_tasks: Back
         "fetched":    0,
         "written":    0,
         "total":      0,
+        "pct":        0,
         "added":      0,
         "updated":    0,
         "results":    {},
@@ -61,8 +62,10 @@ async def trigger_sync(body: SyncRequest = SyncRequest(), background_tasks: Back
             job["fetched"] = fetched
             job["written"] = written
             job["total"]   = total
+            job["pct"]     = round(written / max(total, 1) * 100) if total > 0 else 0
             if phase == "done":
                 job["status"]      = "done"
+                job["pct"]         = 100
                 job["finished_at"] = time.time()
 
         try:
