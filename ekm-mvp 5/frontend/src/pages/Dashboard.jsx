@@ -142,8 +142,7 @@ function SharePointTile({src, syncing, onSync, progress}) {
     <div className="rounded-xl flex flex-col overflow-hidden"
       style={{background:T.bgCard, border:`1px solid ${T.border}`}}>
 
-      {/* Q2 banner if never synced */}
-      {(true) ? (
+      {(true) && (
         <div className="p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
