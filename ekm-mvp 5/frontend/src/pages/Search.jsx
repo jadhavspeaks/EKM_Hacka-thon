@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useTheme } from '../ThemeContext'
+import { T } from '../theme'
 import { searchDocs, getPersonProfile } from '../api'
 import { SourceBadge, EmptyState, Spinner, TeamsButton } from '../components/UI'
 import {
@@ -22,7 +22,6 @@ const ROLE_ICONS = {
 
 // ── Person Profile Banner (intent detected) ──────────────────────────────────
 function PersonBanner({ name, onClose }) {
-  const { T } = useTheme()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -131,7 +130,6 @@ function PersonBanner({ name, onClose }) {
 
 // ── Compact SME sidebar ───────────────────────────────────────────────────────
 function SMESidebar({ smes }) {
-  const { T } = useTheme()
   const [expanded, setExpanded] = useState(false)
   if (!smes?.length) return null
   const visible = expanded ? smes : smes.slice(0, 3)
@@ -204,7 +202,6 @@ function SMESidebar({ smes }) {
 
 // ── Best Answer snippet ───────────────────────────────────────────────────────
 function BestAnswer({ answer }) {
-  const { T } = useTheme()
   if (!answer?.trim()) return null
   return (
     <div className="flex gap-3 bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4">
@@ -221,7 +218,6 @@ function BestAnswer({ answer }) {
 
 // ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ doc, onClick }) {
-  const { T } = useTheme()
   const m = doc.metadata || {}
   const preview = doc.content_preview || doc.content?.slice(0, 200) || ''
 
@@ -294,7 +290,6 @@ function ResultCard({ doc, onClick }) {
 
 // ── GitHub card ───────────────────────────────────────────────────────────────
 function GitHubCard({ doc, onClick }) {
-  const { T } = useTheme()
   const m = doc.metadata || {}
   const ct = m.content_type || 'commit'
   const Icon = ct === 'pull_request' ? GitBranch : ct === 'commit' ? MessageSquare : FileText
@@ -343,7 +338,6 @@ function GitHubCard({ doc, onClick }) {
 
 // ── Section header ─────────────────────────────────────────────────────────────
 function SectionHeader({ color, label, count, icon: Icon }) {
-  const { T } = useTheme()
   return (
     <div className="flex items-center gap-2 mb-3">
       <div className="w-1 h-4 rounded-full" style={{ background: color }}/>

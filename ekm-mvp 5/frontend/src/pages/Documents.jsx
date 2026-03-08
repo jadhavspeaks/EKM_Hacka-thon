@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useTheme } from '../ThemeContext'
+import { T } from '../theme'
 import { listDocuments } from '../api'
 import { SourceBadge, EmptyState, Spinner } from '../components/UI'
 import { ExternalLink, FileText, Clock, Tag, ChevronLeft, ChevronRight, Filter, Eye } from 'lucide-react'
@@ -16,7 +16,6 @@ const SOURCE_COUNTS_COLOR = {
 }
 
 function DocRow({ doc, onClick }) {
-  const { T } = useTheme()
   const m = doc.metadata || {}
   const isJira = doc.source_type === 'jira'
   const isGH   = doc.source_type === 'github'
@@ -84,7 +83,6 @@ function DocRow({ doc, onClick }) {
 }
 
 export default function Documents() {
-  const { T } = useTheme()
   const [docs, setDocs]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [sourceFilter, setFilter]   = useState('')

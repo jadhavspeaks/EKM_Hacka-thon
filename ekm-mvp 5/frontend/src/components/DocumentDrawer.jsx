@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useTheme } from '../ThemeContext'
+import { T } from '../theme'
 import { getDocument } from '../api'
 import { SourceBadge, Spinner, TeamsButton } from './UI'
 import {
@@ -310,7 +310,6 @@ function GenericLayout({ doc }) {
 // MAIN DRAWER
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DocumentDrawer({ docId, onClose }) {
-  const { T } = useTheme()
   const [doc, setDoc]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)

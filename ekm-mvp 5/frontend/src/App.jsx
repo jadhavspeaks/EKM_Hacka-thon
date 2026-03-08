@@ -4,8 +4,8 @@ import Dashboard from './pages/Dashboard'
 import SearchPage from './pages/Search'
 import Documents from './pages/Documents'
 import Intelligence from './pages/Intelligence'
-import { ThemeProvider, useTheme } from './ThemeContext'
 import ThemeToggle from './ThemeToggle'
+import { T } from './theme'
 
 const NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },
@@ -14,11 +14,7 @@ const NAV = [
   { to: '/intelligence', icon: Lightbulb,       label: 'Intelligence' },
 ]
 
-const LOGO_BG = 'linear-gradient(135deg,#0052cc,#0891b2)'
-
-function AppShell() {
-  const { T } = useTheme()
-
+export default function App() {
   return (
     <div className="flex h-screen overflow-hidden"
       style={{ background: T.bg, fontFamily: T.font }}>
@@ -30,8 +26,8 @@ function AppShell() {
         {/* Logo */}
         <div className="px-4 py-4" style={{ borderBottom: `1px solid ${T.navBorder}` }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: LOGO_BG }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg,#0052cc,#0891b2)' }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white"
                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -53,9 +49,9 @@ function AppShell() {
             <NavLink key={to} to={to} end={to === '/'}
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               style={({ isActive }) => ({
-                background:  isActive ? T.navActiveBg  : 'transparent',
-                color:       isActive ? T.navActive     : T.navText,
-                border:      isActive ? `1px solid ${T.navActiveBorder}` : '1px solid transparent',
+                background: isActive ? T.navActiveBg  : 'transparent',
+                color:      isActive ? T.navActive     : T.navText,
+                border:     isActive ? `1px solid ${T.navActiveBorder}` : '1px solid transparent',
               })}
             >
               <Icon size={16} />
@@ -64,14 +60,12 @@ function AppShell() {
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="px-4 py-3" style={{ borderTop: `1px solid ${T.navBorder}` }}>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full animate-pulse"
-              style={{ background: '#0052cc' }} />
+        {/* Footer with theme toggle */}
+        <div className="px-3 py-3" style={{ borderTop: `1px solid ${T.navBorder}` }}>
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#0052cc' }} />
             <span className="text-xs" style={{ color: T.navText }}>MVP v3.8</span>
           </div>
-          {/* Theme toggle in sidebar footer */}
           <ThemeToggle />
         </div>
       </aside>
@@ -79,20 +73,12 @@ function AppShell() {
       {/* ── Main content ── */}
       <main className="flex-1 overflow-y-auto flex flex-col">
         <Routes>
-          <Route path="/intelligence" element={<Intelligence />} />
           <Route path="/"             element={<Dashboard />}    />
           <Route path="/search"       element={<SearchPage />}   />
           <Route path="/documents"    element={<Documents />}    />
+          <Route path="/intelligence" element={<Intelligence />} />
         </Routes>
       </main>
     </div>
-  )
-}
-
-export default function App() {
-  return (
-    <ThemeProvider>
-      <AppShell />
-    </ThemeProvider>
   )
 }

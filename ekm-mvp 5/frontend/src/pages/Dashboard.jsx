@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useTheme } from '../ThemeContext'
+import { T } from '../theme'
 import { useNavigate } from 'react-router-dom'
 import { getDashboard, triggerSync, getSyncStatus, getSyncSourcesMeta, testSharePoint } from '../api'
 import { Spinner } from '../components/UI'
@@ -24,7 +24,6 @@ const SRC = {
 }
 
 function Spark({ values=[], color, h=28, w=80 }) {
-  const { T } = useTheme()
   if (!color) color = T.teal
   if (values.length < 2) return null
   const max = Math.max(...values, 1)
@@ -50,7 +49,6 @@ function Spark({ values=[], color, h=28, w=80 }) {
 }
 
 function Beacon({ status }) {
-  const { T } = useTheme()
   const col = status==='success'||status==='idle' ? T.green : status==='error'||status==='failed' ? T.red : T.gold
   return (
     <span className="relative inline-flex">
@@ -64,7 +62,6 @@ function Beacon({ status }) {
 }
 
 function KPI({label,value,sub,trendVal,accent,sparkVals,onClick,icon:Icon}) {
-  const { T } = useTheme()
   if (!accent) accent = T.teal
   const pos=trendVal>0,neg=trendVal<0
   return (
@@ -104,7 +101,6 @@ function KPI({label,value,sub,trendVal,accent,sparkVals,onClick,icon:Icon}) {
 }
 
 function SharePointTile({src, syncing, onSync, progress}) {
-  const { T } = useTheme()
   const cfg = SRC.sharepoint
   const isSyncing = syncing === src.source_type
   const isErr = src.sync_status === 'error' || src.sync_status === 'failed'
@@ -263,7 +259,6 @@ function SharePointTile({src, syncing, onSync, progress}) {
 }
 
 function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
-  const { T } = useTheme()
   const cfg = SRC[src.source_type] || SRC.confluence
   const isSyncing = syncing === src.source_type
   const isErr = src.sync_status === 'error' || src.sync_status === 'failed'
@@ -457,7 +452,6 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
 }
 
 function BarDay({day,total,max}) {
-  const { T } = useTheme()
   const pct=total/Math.max(max,1)*100
   return (
     <div className="flex flex-col items-center gap-1 flex-1">
@@ -472,7 +466,6 @@ function BarDay({day,total,max}) {
 }
 
 function Shortcut({icon:Icon,label,sub,accent,onClick}) {
-  const { T } = useTheme()
   return (
     <button onClick={onClick}
       className="rounded-xl p-3.5 text-left flex items-center gap-3 w-full transition-all duration-150 hover:scale-[1.01] group"
@@ -492,7 +485,6 @@ function Shortcut({icon:Icon,label,sub,accent,onClick}) {
 }
 
 export default function Dashboard() {
-  const { T } = useTheme()
   const [data,setData]=useState(null)
   const [loading,setLoading]=useState(true)
   const [syncing,setSyncing]=useState(null)

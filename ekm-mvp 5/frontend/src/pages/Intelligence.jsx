@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useTheme } from '../ThemeContext'
+import { T } from '../theme'
 import { useLocation } from 'react-router-dom'
 import { getDashboard, getAnalyticsStats, getHealthReport, getRiskReport, getOnboardingPath, getKnowledgeGaps, getExpertsAtRisk, getCoverageReport, getVelocity, getHandover, getHandoverProgress, saveHandoverProgress, searchPeople, getPersonProfile, getConfig } from '../api'
 import { Spinner, SourceBadge } from '../components/UI'
@@ -53,7 +53,6 @@ function TeamsButton({ name, domain }) {
 }
 
 function StatCard({ label, value, sub, color = 'text-navy-800' }) {
-  const { T } = useTheme()
   return (
     <div className="card p-4 text-center">
       <div className={`text-3xl font-bold ${color}`}>{value}</div>
@@ -64,7 +63,6 @@ function StatCard({ label, value, sub, color = 'text-navy-800' }) {
 }
 
 function SectionTitle({ children, sub }) {
-  const { T } = useTheme()
   return (
     <div className="mb-4">
       <h2 className="text-lg font-bold text-gray-900">{children}</h2>
@@ -75,7 +73,6 @@ function SectionTitle({ children, sub }) {
 
 // ── Analytics Tab ─────────────────────────────────────────────────────────────
 function AnalyticsTab() {
-  const { T } = useTheme()
   const [searchData, setSearchData] = useState(null)
   const [corpusData, setCorpusData] = useState(null)
   const [loading, setLoading]       = useState(true)
@@ -412,7 +409,6 @@ function AnalyticsTab() {
 
 
 function HealthTab() {
-  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -525,7 +521,6 @@ function HealthTab() {
 
 // ── Risk Tab ──────────────────────────────────────────────────────────────────
 function RiskTab({ teamsDomain }) {
-  const { T } = useTheme()
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState('all')
@@ -675,7 +670,6 @@ function RiskTab({ teamsDomain }) {
 
 // ── People Tab ────────────────────────────────────────────────────────────────
 function PeopleTab({ teamsDomain }) {
-  const { T } = useTheme()
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -866,7 +860,6 @@ function PeopleTab({ teamsDomain }) {
 
 // ── Onboarding Tab ────────────────────────────────────────────────────────────
 function OnboardingTab() {
-  const { T } = useTheme()
   const [topic, setTopic]     = useState('')
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
@@ -974,7 +967,6 @@ function OnboardingTab() {
 
 // ── Knowledge Gaps Tab ────────────────────────────────────────────────────────
 function GapsTab() {
-  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -1052,7 +1044,6 @@ function GapsTab() {
 
 // ── Experts At Risk Tab ───────────────────────────────────────────────────────
 function ExpertsAtRiskTab({ teamsDomain }) {
-  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -1144,7 +1135,6 @@ function ExpertsAtRiskTab({ teamsDomain }) {
 
 // ── Coverage Tab ──────────────────────────────────────────────────────────────
 function CoverageTab() {
-  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -1250,7 +1240,6 @@ function CoverageTab() {
 
 // ── Knowledge Velocity Tab ───────────────────────────────────────────────────
 function VelocityTab() {
-  const { T } = useTheme()
   const [input, setInput]     = useState('')
   const [topic, setTopic]     = useState('')
   const [data, setData]       = useState(null)
@@ -1392,7 +1381,6 @@ function VelocityTab() {
 
 // ── Handover Tracker Tab ──────────────────────────────────────────────────────
 function HandoverTab({ teamsDomain }) {
-  const { T } = useTheme()
   const [name, setName]       = useState('')
   const [input, setInput]     = useState('')
   const [data, setData]       = useState(null)
@@ -1619,7 +1607,6 @@ const TAB_META = {
 }
 
 export default function Intelligence() {
-  const { T } = useTheme()
   const location = useLocation()
   const [tab, setTab]                 = useState(location.state?.tab || 'analytics')
   const [teamsDomain, setTeamsDomain] = useState('citi.com')
