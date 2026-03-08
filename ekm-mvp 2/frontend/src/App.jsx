@@ -68,8 +68,8 @@ function AppShell() {
         <Routes>
           <Route path="/intelligence" element={<Intelligence />} />
           <Route path="/" element={<Dashboard />} />
-          <Route path="/search"    element={<div className="max-w-6xl mx-auto p-6 w-full bg-gray-50 min-h-full"><SearchPage /></div>} />
-          <Route path="/documents" element={<div className="max-w-6xl mx-auto p-6 w-full bg-gray-50 min-h-full"><Documents /></div>} />
+          <Route path="/search"    element={<SearchPage />} />
+          <Route path="/documents" element={<Documents />} />
         </Routes>
       </main>
     </div>

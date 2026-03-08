@@ -28,6 +28,29 @@ settings = get_settings()
 
 CANDIDATE_POOL = 200
 
+# ── Person-query intent detection ─────────────────────────────────────────────
+# If the query looks like "what X has worked on" → return person_query=True + name
+_PERSON_PATTERNS = [
+    re.compile(r"what\s+(?:has\s+|did\s+)?(.+?)\s+(?:worked?|done?|built?|created?|contributed?)\s+on", re.I),
+    re.compile(r"what\s+did\s+(.+?)\s+(?:work|do|build|create)\s+on", re.I),
+    re.compile(r"work(?:s|ed)?\s+by\s+(.+)", re.I),
+    re.compile(r"contributions?\s+(?:of|by|from)\s+(.+)", re.I),
+    re.compile(r"(?:show|find|list|get)\s+(?:work|contributions?|commits?)\s+(?:by|from|of)\s+(.+)", re.I),
+    re.compile(r"(.+?)\s+(?:has\s+)?worked?\s+on", re.I),
+]
+
+def _detect_person_query(q: str) -> str | None:
+    """Returns extracted name if query is asking about a person's work, else None."""
+    q = q.strip()
+    for pat in _PERSON_PATTERNS:
+        m = pat.search(q)
+        if m:
+            name = m.group(1).strip().strip('"\'')
+            # Must look like a name (at least 2+ chars, not a generic keyword)
+            if len(name) >= 3 and name.lower() not in {"someone", "anyone", "people", "team", "everyone"}:
+                return name
+    return None
+
 
 def _extract_best_answer(query: str, documents: list[dict], max_chars: int = 500) -> str:
     """
@@ -228,6 +251,9 @@ async def search(
     # ── Step 4: SME ranking (across ALL matched docs, not just current page) ──
     smes = rank_smes(ranked)
 
+    # ── Step 4b: Person-query intent detection ────────────────────────────────
+    person_query_name = _detect_person_query(q)
+
     # ── Step 5: Best answer (from top 5 ranked docs) ─────────────────────────
     best_answer = _extract_best_answer(q, ranked[:5])
 
@@ -242,12 +268,13 @@ async def search(
     await log_search(db, q, total, source_type)
 
     return {
-        "query":       q,
-        "total":       total,
-        "results":     results,
-        "page":        page,
-        "page_size":   page_size,
-        "smes":        smes,
-        "best_answer": best_answer,
-        "fuzzy":       fuzzy_mode,
+        "query":            q,
+        "total":            total,
+        "results":          results,
+        "page":             page,
+        "page_size":        page_size,
+        "smes":             smes,
+        "best_answer":      best_answer,
+        "fuzzy":            fuzzy_mode,
+        "person_query":     person_query_name,
     }

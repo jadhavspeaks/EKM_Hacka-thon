@@ -1,0 +1,11 @@
+# SharePoint Sites — EKM Knowledge Crawler
+# ─────────────────────────────────────────
+# One URL per line. Lines starting with # are ignored.
+#
+# SITE TYPES:
+#   /sites/  → Wiki mode   — crawls Site Pages (wiki articles) + Document Libraries
+#   /teams/  → Docs mode   — crawls Document Libraries only (no wiki pages)
+#
+# ── Your sites ───────────────────────────────────────────────────────────────
+https://citi.sharepoint.com/sites/cc-ee        # Wiki content
+https://citi.sharepoint.com/teams/AutoCon      # Team documents
