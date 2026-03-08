@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTheme } from '../ThemeContext'
 import { getDocument } from '../api'
 import { SourceBadge, Spinner, TeamsButton } from './UI'
 import {
