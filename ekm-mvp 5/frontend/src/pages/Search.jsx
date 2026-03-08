@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { T } from '../theme'
 import { searchDocs, getPersonProfile } from '../api'
 import { SourceBadge, EmptyState, Spinner, TeamsButton } from '../components/UI'
 import {
@@ -9,6 +8,30 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import DocumentDrawer from '../components/DocumentDrawer'
+// ── Theme (inline) ───────────────────────────────────────────────────────
+const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch { return 'arctic' } })()
+const T = _tid === 'slate' ? {
+  id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
+  border:'#dde3eb', borderLt:'#e4eaf2',
+  blue:'#2563eb', blueLt:'#eff6ff', blueMid:'#dbeafe',
+  teal:'#059669', tealDk:'#047857', tealLt:'#ecfdf5',
+  orange:'#ea580c', red:'#f43f5e', green:'#10b981', gold:'#f59e0b', purple:'#8b5cf6',
+  textPri:'#1e2a3a', textSec:'#4a6278', textDim:'#7a90a4',
+  navBg:'#1e2a3a', navBorder:'#2d3d52', navText:'#7a90a4', navActive:'#e8edf2',
+  navActiveBg:'#2d3d52', navActiveBorder:'#3a5068',
+  font:"'IBM Plex Sans',sans-serif", mono:"'IBM Plex Mono',monospace",
+} : {
+  id:'arctic', bg:'#f4f6f9', bgCard:'#ffffff', bgMid:'#f8fafc',
+  border:'#dde3ec', borderLt:'#e8edf4',
+  blue:'#0052cc', blueLt:'#eff6ff', blueMid:'#dbeafe',
+  teal:'#0891b2', tealDk:'#0e7490', tealLt:'#ecfeff',
+  orange:'#ea580c', red:'#dc2626', green:'#16a34a', gold:'#d97706', purple:'#7c3aed',
+  textPri:'#0d1117', textSec:'#4a5568', textDim:'#8896a7',
+  navBg:'#ffffff', navBorder:'#e8edf4', navText:'#4a5568', navActive:'#0052cc',
+  navActiveBg:'#eff6ff', navActiveBorder:'#dbeafe',
+  font:"'IBM Plex Sans',sans-serif", mono:"'IBM Plex Mono',monospace",
+}
+
 
 const ROLE_ICONS = {
   'Confluence Author': '📄',
@@ -41,14 +64,14 @@ function PersonBanner({ name, onClose }) {
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-5">
       {/* Banner header */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
-        style={{ background: '#061829', borderBottom:'1px solid #1a3050' }}>
+        style={{ background:T.navBg, borderBottom:`1px solid ${T.navBorder}` }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-teal-100 border border-teal-200 flex items-center justify-center font-bold text-teal-700 text-sm">
             {(profile?.name || name).split(/[\s,]+/).filter(Boolean).map(w => w[0]).slice(0,2).join('')}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-slate-900 text-sm">
+              <span className="font-semibold text-sm">
                 {loading ? 'Looking up profile…' : (profile?.name || name)}
               </span>
               {profile && (
@@ -138,7 +161,7 @@ function SMESidebar({ smes }) {
   return (
     <div className="rounded-xl overflow-hidden sticky top-4" style={{background:T.bgCard, border:`1px solid ${T.border}`, boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}>
       {/* Header */}
-      <div className="px-4 py-3 flex items-center justify-between" style={{borderBottom:"1px solid #1a3050", background:"#061829"}}>
+      <div className="px-4 py-3 flex items-center justify-between" style={{borderBottom:`1px solid ${T.navBorder}`, background:T.navBg}}>
         <div className="flex items-center gap-2">
           <Users size={13} className="text-indigo-500"/>
           <span className="text-xs font-semibold text-slate-700">Best People To Ask</span>
@@ -276,7 +299,7 @@ function ResultCard({ doc, onClick }) {
           {doc.tags?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {doc.tags.slice(0,5).map(t => (
-                <span key={t} className="text-xs px-1.5 py-0.5 rounded-full" style={{background:"#0a1628", color:"#64748b", border:"1px solid #1a3050"}}>
+                <span key={t} className="text-xs px-1.5 py-0.5 rounded-full" style={{background:T.bgMid, color:T.textSec, border:`1px solid ${T.border}`}}>
                   {t}
                 </span>
               ))}
@@ -310,7 +333,7 @@ function GitHubCard({ doc, onClick }) {
                   {doc.title}
                 </a>
               ) : (
-                <span className="font-semibold text-slate-900 text-sm">{doc.title}</span>
+                <span className="font-semibold text-sm">{doc.title}</span>
               )}
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-mono">{ct}</span>
@@ -415,7 +438,7 @@ export default function SearchPage() {
     <div className="min-h-full" style={{background:T.bg}}>
 
       {/* ── Search header ── */}
-      <div className="px-6 py-5" style={{background:"#0d1f35", borderBottom:"1px solid #1a3050"}}>
+      <div className="px-6 py-5" style={{background:T.navBg, borderBottom:`1px solid ${T.navBorder}`}}>
         <div className="max-w-5xl mx-auto">
           <h1 className="text-lg font-bold mb-1" style={{color:T.textPri}}>Search</h1>
           <p className="text-xs mb-4" style={{color:"#64748b"}}>BM25 · entity extraction · SME ranking · Confluence-first</p>
