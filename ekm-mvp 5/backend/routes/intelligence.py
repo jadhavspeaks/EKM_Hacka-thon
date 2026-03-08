@@ -44,7 +44,6 @@ def clear_cache(source: str | None = None):
         # Clear all keys — intelligence data is cross-source so always full clear
         _CACHE.clear()
         logger.info(f"Intelligence cache cleared after {source} sync")
-    return val
 
 VENDOR_PATTERN   = re.compile(r'\[[^\]]*\bNE\]|\bNE\s*$', re.IGNORECASE)
 INTERNAL_PATTERN = re.compile(r'\[[^\]]*\bTECH\b[^\]]*\]', re.IGNORECASE)
