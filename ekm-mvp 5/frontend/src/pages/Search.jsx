@@ -574,10 +574,10 @@ export default function SearchPage() {
                       Previous
                     </button>
                     <span className="text-sm text-slate-500">
-                      Page {page} of {results.total_pages ?? 1}
+                      Page {page} of {results.total_pages || 1}
                     </span>
                     <button className="px-4 py-2 text-sm border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-40"
-                      disabled={page >= results.total_pages ?? 1}
+                      disabled={page >= (results.total_pages || 1)}
                       onClick={() => doSearch(query, sourceFilter, page + 1)}>
                       Next
                     </button>

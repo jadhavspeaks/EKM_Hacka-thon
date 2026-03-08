@@ -336,7 +336,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
         <div>
           <div className="text-2xl font-bold"
             style={{color:cfg.color, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:'-0.02em'}}>
-            {src.doc_count?.toLocaleString() ?? '—'}
+            {src.doc_count != null ? src.doc_count.toLocaleString() : '—'}
           </div>
           <div className="text-xs mt-0.5" style={{color:T.textDim}}>documents</div>
         </div>
@@ -647,7 +647,7 @@ export default function Dashboard() {
           <KPI label="Zero-Result Gaps" value={zeroR}
             sub="Unanswered queries" accent={zeroR>0?T.orange:T.green}
             icon={zeroR>0?AlertTriangle:CheckCircle2} onClick={()=>goTo('gaps')}/>
-          <KPI label="At-Risk Experts" value={data?.experts_at_risk??'—'}
+          <KPI label="At-Risk Experts" value={data?.experts_at_risk != null ? data.experts_at_risk : '—'}
             sub="Inactive or vendor-only" accent={T.red}
             icon={Users} onClick={()=>goTo('experts')}/>
         </div>
@@ -668,7 +668,7 @@ export default function Dashboard() {
               <div className="flex h-2 rounded-full overflow-hidden gap-px mb-4">
                 {liveSrcs.map((s,i)=>{
                   const cfg=SRC[s.source_type]||SRC.confluence
-                  const pct=s.doc_pct??0
+                  const pct=s.doc_pct||0
                   return pct>0?(
                     <div key={i} className="h-full transition-all duration-700"
                       style={{width:(pct+'%'),background:cfg.color,minWidth:4}}/>
@@ -678,7 +678,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap gap-4">
                 {liveSrcs.map((s,i)=>{
                   const cfg=SRC[s.source_type]||SRC.confluence
-                  const pct=(s.doc_pct??0).toFixed(0)
+                  const pct=(s.doc_pct||0).toFixed(0)
                   return (
                     <div key={i} className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full" style={{background:cfg.dot}}/>
@@ -716,7 +716,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {liveSrcs.map((s,i)=>{
                   const cfg=SRC[s.source_type]||SRC.confluence
-                  const pct=s.doc_pct??0
+                  const pct=s.doc_pct||0
                   return (
                     <div key={i}>
                       <div className="flex items-center justify-between mb-1.5">
