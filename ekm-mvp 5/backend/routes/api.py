@@ -3,7 +3,7 @@ from database import get_db
 from models import SyncRequest, SourceType, DashboardStats, SourceStats, SyncStatus, DocumentOut
 from utils.sync_service import run_sync
 from bson import ObjectId
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import asyncio
 import uuid
 import time
