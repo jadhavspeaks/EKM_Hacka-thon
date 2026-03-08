@@ -204,7 +204,7 @@ function SharePointTile({src, syncing, onSync, progress}) {
                     <div style={{
                       height:'100%',borderRadius:2,
                       background:`linear-gradient(90deg,${cfg.color}80,${cfg.color})`,
-                      width:`${progress?.pct||5}%`,transition:'width .4s ease'
+                      width:((progress?.pct||5)+'%'),transition:'width .4s ease'
                     }}/>
                   </div>
                 )}
@@ -381,7 +381,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
               <div style={{
                 height:'100%', borderRadius:2,
                 background:`linear-gradient(90deg,${cfg.color}80,${cfg.color})`,
-                width:`${progress?.pct||5}%`,
+                width:((progress?.pct||5)+'%'),
                 transition:'width .4s ease'
               }}/>
             </div>
@@ -468,7 +468,7 @@ function BarDay({day,total,max}) {
       <span className="text-xs" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>{total||''}</span>
       <div className="w-full rounded-sm flex flex-col justify-end" style={{height:40}}>
         <div className="w-full rounded-sm transition-all duration-700"
-          style={{height:`${Math.max(pct,2)}%`,background:`linear-gradient(to top, ${T.tealDk}, ${T.teal})`}}/>
+          style={{height:(Math.max(pct,2)+'%'),background:`linear-gradient(to top, ${T.tealDk}, ${T.teal})`}}/>
       </div>
       <span className="text-xs" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>{day}</span>
     </div>
@@ -672,7 +672,7 @@ export default function Dashboard() {
                   const pct=s.doc_pct??0
                   return pct>0?(
                     <div key={i} className="h-full transition-all duration-700"
-                      style={{width:`${pct}%`,background:cfg.color,minWidth:4}}/>
+                      style={{width:(pct+'%'),background:cfg.color,minWidth:4}}/>
                   ):null
                 })}
               </div>
@@ -728,7 +728,7 @@ export default function Dashboard() {
                       </div>
                       <div className="h-2 rounded-full" style={{background:T.border}}>
                         <div className="h-2 rounded-full transition-all duration-700"
-                          style={{width:`${Math.max(pct,1)}%`,background:cfg.color}}/>
+                          style={{width:(Math.max(pct,1)+'%'),background:cfg.color}}/>
                       </div>
                       <div className="text-xs mt-0.5" style={{color:T.textDim}}>{pct.toFixed(1)}% of corpus</div>
                     </div>
