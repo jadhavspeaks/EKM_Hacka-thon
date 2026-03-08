@@ -171,3 +171,20 @@ export function StatCard({ label, value, sub, color = 'teal' }) {
     </div>
   )
 }
+
+export function TeamsButton({ name, domain = 'citi.com' }) {
+  if (!name) return null
+  const email = name.toLowerCase().replace(/\s+/g, '.') + '@' + domain
+  const href  = `https://teams.microsoft.com/l/chat/0/0?users=${email}`
+  return (
+    <a href={href} target="_blank" rel="noreferrer"
+      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
+      style={{background:'#464eb820', color:'#6264a7', border:'1px solid #6264a730'}}
+      title={`Chat with ${name} on Teams`}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.625 5.4h-3.75V3.975A1.975 1.975 0 0 0 14.9 2h-5.8A1.975 1.975 0 0 0 7.125 3.975V5.4h-3.75A1.375 1.375 0 0 0 2 6.775v10.45A1.375 1.375 0 0 0 3.375 18.6h.675l.9 3.4 3.4-.9V22h7.3v-.9l3.4.9.9-3.4h.675A1.375 1.375 0 0 0 22 17.225V6.775A1.375 1.375 0 0 0 20.625 5.4z"/>
+      </svg>
+      Teams
+    </a>
+  )
+}
