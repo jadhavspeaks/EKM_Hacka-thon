@@ -105,6 +105,7 @@ export default function Documents() {
   const totalPages = docs ? Math.ceil(docs.total / docs.page_size) : 1
 
   return (
+    <>
     <div className="min-h-full bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-6 py-5">
@@ -203,5 +204,6 @@ export default function Documents() {
 
     {/* Document Preview Drawer */}
     <DocumentDrawer docId={drawerDocId} onClose={() => setDrawerDocId(null)} />
+    </>
   )
 }

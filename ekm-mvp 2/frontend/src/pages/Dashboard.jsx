@@ -642,10 +642,9 @@ export default function Dashboard() {
             {/* Source tiles */}
             <div className="grid grid-cols-2 gap-3">
               {liveSrcs.map(src=>(
-                {src.source_type === 'sharepoint'
+                src.source_type === 'sharepoint'
                   ? <SharePointTile key={src.source_type} src={src} syncing={syncing} onSync={handleSync}/>
                   : <SourceTile key={src.source_type} src={src} syncing={syncing} onSync={handleSync} meta={syncMeta}/>
-                }
               ))}
               <div className="rounded-xl p-4 flex flex-col gap-3"
                 style={{background:T.bgCard,border:`1px dashed ${T.borderLt}`,opacity:0.45}}>

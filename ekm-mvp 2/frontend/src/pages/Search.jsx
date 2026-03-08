@@ -36,7 +36,8 @@ function PersonBanner({ name, onClose }) {
   const isInternal = profile?.type === 'internal'
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-5">
+    <>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-5">
       {/* Banner header */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"
         style={{ background: 'linear-gradient(to right, #f0fdfa, #f8fafc)' }}>
@@ -122,6 +123,7 @@ function PersonBanner({ name, onClose }) {
 
     {/* Document Preview Drawer */}
     <DocumentDrawer docId={drawerDocId} onClose={() => setDrawerDocId(null)} />
+    </>
   )
 }
 
