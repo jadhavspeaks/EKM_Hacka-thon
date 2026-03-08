@@ -466,7 +466,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
       )}
     </div>
   )
-}}
+}
 
 function BarDay({day,total,max}) {
   const pct=total/Math.max(max,1)*100
