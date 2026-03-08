@@ -35,8 +35,9 @@ settings = get_settings()
 # Set dynamically from settings — supports both github.com and GitHub Enterprise
 GITHUB_API = None  # resolved in _api_base()
 REQUEST_TIMEOUT = 30
-MAX_DIFF_CHARS  = 3000   # truncate large diffs
-MAX_FILE_CHARS  = 8000   # truncate large source files
+MAX_DIFF_CHARS  = 1500   # truncate large diffs
+MAX_FILE_CHARS  = 3000   # truncate large source files
+MAX_COMMITS_DEFAULT = 50  # reduced for speed
 
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -196,10 +197,14 @@ def _process_commits(
         name    = author.get("name", "")
         date    = author.get("date", "")
 
-        # Get full diff for this commit
-        detail     = _fetch_commit_detail(full_name, sha)
-        files      = detail.get("files", []) if detail else []
-        diff_text  = _build_diff_summary(files)
+        # For speed: only fetch full diff for recent commits (first 20)
+        # Older commits just use stats from the list endpoint
+        if i < 20:
+            detail    = _fetch_commit_detail(full_name, sha)
+            files     = detail.get("files", []) if detail else []
+        else:
+            files     = []
+        diff_text  = _build_diff_summary(files) if files else ""
         file_names = [f.get("filename", "") for f in files]
 
         # Build clean human-readable content (preview shown in UI)
@@ -280,7 +285,7 @@ SKIP_PATHS = {
     "__pycache__", ".idea", ".vscode", "coverage",
 }
 
-MAX_FILES_PER_REPO = 300
+MAX_FILES_PER_REPO = 30  # reduced for speed
 
 
 def _fetch_file_content(full_name: str, path: str) -> str:

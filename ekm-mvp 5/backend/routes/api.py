@@ -74,6 +74,7 @@ async def trigger_sync(body: SyncRequest = SyncRequest(), background_tasks: Back
                 force_full        = body.force_full,
                 spaces_override   = body.spaces_override or None,
                 projects_override = body.projects_override or None,
+                repos_override    = body.repos_override or None,
                 on_progress       = on_progress,
             )
             job["results"] = results

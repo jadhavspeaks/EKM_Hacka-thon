@@ -52,16 +52,16 @@ INTERNAL_PATTERN = re.compile(r'\[[^\]]*\bTECH\b[^\]]*\]', re.IGNORECASE)
 
 def _classify(name: str) -> str:
     """
-    Vendor: ANY bracket ending in NE, or bare NE suffix.
-      [TECH NE], [ICG-IT NE], [ICG NE], [NE] -> vendor
-    Internal: TECH bracket without NE -> internal
+    Vendor:   bracket ending in NE  e.g. [TECH NE], [ICG NE], [BKG NE], [NE]
+    Internal: everyone else — no bracket, or bracket NOT ending in NE
+              e.g. [TECH], [ICG-IT], [BKG], no bracket at all
     """
     n = (name or '').strip()
+    if not n:
+        return "unknown"
     if VENDOR_PATTERN.search(n):
         return "vendor"
-    if INTERNAL_PATTERN.search(n) and not VENDOR_PATTERN.search(n):
-        return "internal"
-    return "unknown"
+    return "internal"
 
 
 def _days_ago(dt) -> int | None:

@@ -12,6 +12,7 @@ Orchestrates incremental syncs with:
 """
 
 import logging
+import traceback
 import inspect
 from datetime import datetime, timezone
 from typing import Callable, Awaitable
@@ -177,13 +178,14 @@ async def run_sync(
 
         except Exception as e:
             error_msg = str(e)
+            full_tb = traceback.format_exc()
             log.update({
                 "status":        SyncStatus.FAILED,
                 "finished_at":   datetime.now(timezone.utc),
                 "error_message": error_msg,
             })
             results[src] = {"status": "failed", "error": error_msg}
-            logger.error(f"Sync {src} failed: {e}")
+            logger.error(f"Sync {src} failed: {e}\nFull traceback:\n{full_tb}")
 
         await db.sync_logs.update_one(
             {"_id": log_id},

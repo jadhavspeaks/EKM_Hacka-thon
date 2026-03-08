@@ -111,6 +111,7 @@ class SyncRequest(BaseModel):
     force_full:        bool = False                  # True = ignore last_sync
     spaces_override:   list[str] = []   # Confluence: specific space keys to sync
     projects_override: list[str] = []   # Jira: specific project keys to sync
+    repos_override:    list[str] = []   # GitHub: specific repos to sync
 
 
 class SyncLog(BaseModel):
