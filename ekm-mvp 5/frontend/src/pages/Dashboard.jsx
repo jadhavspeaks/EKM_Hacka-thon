@@ -343,7 +343,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
                 }}
                 title="Choose spaces / projects">
                 <Settings size={10}/>
-                <span>{syncMeta ? selectedLabel : 'Configure'}</span>
+                <span>{meta ? selectedLabel : 'Configure'}</span>
                 {configOpen ? <ChevronUp size={9}/> : <ChevronDown size={9}/>}
               </button>
             )}
