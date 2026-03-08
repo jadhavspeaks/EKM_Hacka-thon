@@ -194,7 +194,7 @@ function SharePointTile({src, syncing, onSync, progress}) {
                   <RefreshCw size={10} className={isSyncing?'animate-spin':''}/>{
                     isSyncing
                       ? (progress?.phase==='fetching' ? 'Fetching…'
-                         : progress?.phase==='writing' ? `Writing… ${progress.pct||0}%`
+                         : progress?.phase==='writing' ? `Writing… ${(progress.pct||0) + '%'}`
                          : 'Syncing…')
                       : 'Sync'
                   }
@@ -369,7 +369,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
           <RefreshCw size={11} className={isSyncing ? 'animate-spin' : ''}/>
           {isSyncing
             ? (progress?.phase === 'fetching' ? 'Fetching…'
-               : progress?.phase === 'writing' ? `Writing… ${progress.pct||0}%`
+               : progress?.phase === 'writing' ? `Writing… ${(progress.pct||0) + '%'}`
                : 'Syncing…')
             : selectedItems.length > 0 ? `Sync ${selectedLabel}` : 'Sync'}
         </button>
