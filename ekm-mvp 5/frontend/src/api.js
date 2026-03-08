@@ -11,15 +11,17 @@ export const searchDocs = (q, sourceType, page = 1) =>
 export const getDashboard = () => api.get('/sources')
 
 export const getSyncSourcesMeta   = () => api.get('/sync/sources-meta')
+export const getGithubRepos       = () => api.get('/sync/github-repos')
 export const testSharePoint       = () => api.get('/sync/sharepoint-test')
 
 // Returns {job_id} immediately — use getSyncStatus to poll
-export const triggerSync = (sourceType, forceFull = false, spacesOverride = [], projectsOverride = []) =>
+export const triggerSync = (sourceType, forceFull = false, spacesOverride = [], projectsOverride = [], reposOverride = []) =>
   api.post('/sync', {
     source_type:       sourceType || null,
     force_full:        forceFull,
     spaces_override:   spacesOverride,
     projects_override: projectsOverride,
+    repos_override:    reposOverride,
   })
 
 // Poll this every 2s after triggerSync

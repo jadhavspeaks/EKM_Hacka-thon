@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDashboard, triggerSync, getSyncStatus, getSyncSourcesMeta, testSharePoint } from '../api'
+import { getDashboard, triggerSync, getSyncStatus, getSyncSourcesMeta, testSharePoint, getGithubRepos } from '../api'
 import { Spinner } from '../components/UI'
 import { RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle,
          CheckCircle2, Clock, Database, Search, Activity,
@@ -285,47 +285,58 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
   const cfg = SRC[src.source_type] || SRC.confluence
   const isSyncing = syncing === src.source_type
   const isErr = src.sync_status === 'error' || src.sync_status === 'failed'
-  const hasConfig = src.source_type === 'confluence' || src.source_type === 'jira'
+  const hasConfig = src.source_type === 'confluence' || src.source_type === 'jira' || src.source_type === 'github'
 
-  // Config panel state
   const [configOpen, setConfigOpen] = useState(false)
-  const [selectedItems, setSelectedItems] = useState([])  // selected space/project keys
+  const [selectedItems, setSelectedItems] = useState([])
+  const [githubRepos, setGithubRepos] = useState(null)  // null = not loaded yet
 
   const availableItems = src.source_type === 'confluence'
     ? (meta?.confluence_spaces || [])
     : src.source_type === 'jira'
     ? (meta?.jira_projects || [])
+    : src.source_type === 'github'
+    ? (githubRepos || [])
     : []
 
-  const handleConfigToggle = () => {
-    // Always trigger meta load when opening (no-op if already loaded since parent caches)
-    if (!configOpen && onLoadMeta) onLoadMeta()
+  const handleConfigToggle = async () => {
+    if (!configOpen) {
+      if (src.source_type === 'github' && !githubRepos) {
+        try {
+          const r = await getGithubRepos()
+          setGithubRepos(r.data?.repos || [])
+        } catch { setGithubRepos([]) }
+      } else if (onLoadMeta) {
+        onLoadMeta()
+      }
+    }
     setConfigOpen(o => !o)
   }
 
-  const toggleItem = (key) => {
-    setSelectedItems(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    )
-  }
+  const toggleItem = (key) =>
+    setSelectedItems(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
 
   const handleSync = () => {
     const spaces   = src.source_type === 'confluence' ? selectedItems : []
     const projects = src.source_type === 'jira'       ? selectedItems : []
-    onSync(src.source_type, spaces, projects)
+    const repos    = src.source_type === 'github'     ? selectedItems : []
+    onSync(src.source_type, spaces, projects, repos)
   }
 
-  const selectedLabel = selectedItems.length === 0
-    ? 'All'
-    : selectedItems.length === 1
-    ? selectedItems[0]
+  const itemLabel = src.source_type === 'confluence' ? 'Spaces'
+    : src.source_type === 'jira' ? 'Projects' : 'Repos'
+
+  const selectedLabel = selectedItems.length === 0 ? 'All'
+    : selectedItems.length === 1 ? selectedItems[0]
     : `${selectedItems.length} selected`
+
+  const isLoading = configOpen && hasConfig && availableItems.length === 0 &&
+    (src.source_type !== 'github' || githubRepos === null)
 
   return (
     <div className="rounded-xl flex flex-col gap-0 overflow-hidden"
       style={{background:T.bgCard, border:`1px solid ${T.border}`}}>
 
-      {/* Main tile */}
       <div className="p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -341,9 +352,9 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
                   color: configOpen ? T.teal : T.textDim,
                   border: `1px solid ${configOpen ? T.teal+'40' : T.border}`
                 }}
-                title="Choose spaces / projects">
+                title={`Choose ${itemLabel.toLowerCase()}`}>
                 <Settings size={10}/>
-                <span>{meta ? selectedLabel : 'Configure'}</span>
+                <span>{(meta || githubRepos) ? selectedLabel : 'Configure'}</span>
                 {configOpen ? <ChevronUp size={9}/> : <ChevronDown size={9}/>}
               </button>
             )}
@@ -367,7 +378,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
         {isErr && src.error_message && (
           <div className="text-xs px-2 py-1.5 rounded"
             style={{background:T.red+'15', border:`1px solid ${T.red}30`, color:T.red}}>
-            {src.error_message}
+            ⚠ Prev sync failed — click Sync to retry
           </div>
         )}
 
@@ -387,7 +398,6 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
             : selectedItems.length > 0 ? `Sync ${selectedLabel}` : 'Sync'}
         </button>
 
-        {/* Live progress bar */}
         {isSyncing && (
           <div style={{marginTop:6}}>
             <div style={{height:3,background:T.border,borderRadius:2,overflow:'hidden'}}>
@@ -407,54 +417,39 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
         )}
       </div>
 
-      {/* ── Collapsible config panel ── */}
+      {/* Collapsible config panel */}
       {configOpen && availableItems.length > 0 && (
         <div style={{borderTop:`1px solid ${T.border}`, background:T.bgMid}}>
           <div className="px-3 py-2 flex items-center justify-between">
-            <span className="text-xs font-semibold" style={{color:T.textSec}}>
-              {src.source_type === 'confluence' ? 'Spaces' : 'Projects'}
-            </span>
+            <span className="text-xs font-semibold" style={{color:T.textSec}}>{itemLabel}</span>
             <div className="flex gap-2">
-              <button className="text-xs" style={{color:T.textDim}}
-                onClick={() => setSelectedItems([])}>
-                All
-              </button>
+              <button className="text-xs" style={{color:T.textDim}} onClick={() => setSelectedItems([])}>All</button>
               <span style={{color:T.border}}>·</span>
               <button className="text-xs" style={{color:T.textDim}}
-                onClick={() => setSelectedItems(availableItems.map(i => i.key))}>
-                Select all
-              </button>
+                onClick={() => setSelectedItems(availableItems.map(i => i.key))}>Select all</button>
             </div>
           </div>
           <div className="px-3 pb-3 space-y-1 max-h-48 overflow-y-auto">
             {availableItems.map(item => {
               const isSelected = selectedItems.includes(item.key)
               return (
-                <button key={item.key}
-                  onClick={() => toggleItem(item.key)}
+                <button key={item.key} onClick={() => toggleItem(item.key)}
                   className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all"
                   style={{
                     background: isSelected ? T.teal+'15' : 'transparent',
                     border: `1px solid ${isSelected ? T.teal+'40' : 'transparent'}`,
                   }}>
                   <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
-                    style={{
-                      background: isSelected ? T.teal : T.border,
-                      border: `1px solid ${isSelected ? T.teal : T.borderLt}`
-                    }}>
+                    style={{background: isSelected ? T.teal : T.border, border:`1px solid ${isSelected ? T.teal : T.borderLt}`}}>
                     {isSelected && <Check size={9} color="#fff"/>}
                   </div>
-                  <span className="text-xs font-mono" style={{color: isSelected ? T.teal : T.textSec}}>
-                    {item.key}
-                  </span>
+                  <span className="text-xs font-mono" style={{color: isSelected ? T.teal : T.textSec}}>{item.key}</span>
                   <span className="text-xs truncate flex-1" style={{color:T.textDim}}>
-                    {item.name !== item.key ? item.name : ''}
+                    {item.name && item.name !== item.key ? item.name : ''}
                   </span>
                   {item.type && (
                     <span className="text-xs px-1.5 py-0.5 rounded shrink-0"
-                      style={{background:T.border, color:T.textDim}}>
-                      {item.type}
-                    </span>
+                      style={{background:T.border, color:T.textDim}}>{item.type}</span>
                   )}
                 </button>
               )
@@ -463,16 +458,15 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
         </div>
       )}
 
-      {/* Loading state for meta */}
-      {configOpen && hasConfig && availableItems.length === 0 && (
+      {isLoading && (
         <div className="px-4 py-3 flex items-center gap-2" style={{borderTop:`1px solid ${T.border}`}}>
           <RefreshCw size={11} className="animate-spin" style={{color:T.textDim}}/>
-          <span className="text-xs" style={{color:T.textDim}}>Loading available {src.source_type === 'confluence' ? 'spaces' : 'projects'}…</span>
+          <span className="text-xs" style={{color:T.textDim}}>Loading {itemLabel.toLowerCase()}…</span>
         </div>
       )}
     </div>
   )
-}
+}}
 
 function BarDay({day,total,max}) {
   const pct=total/Math.max(max,1)*100
@@ -541,12 +535,12 @@ export default function Dashboard() {
   useEffect(()=>{const t=setInterval(()=>setTick(new Date()),60000);return()=>clearInterval(t)},[])
 
   const goTo=(tab)=>navigate('/intelligence',{state:{tab}})
-  const handleSync=async(src, spacesOverride=[], projectsOverride=[])=>{
+  const handleSync=async(src, spacesOverride=[], projectsOverride=[], reposOverride=[])=>{
     const srcKey = src||'all'
     setSyncing(srcKey)
     setSyncProgress(p=>({...p,[srcKey]:{phase:'queued',pct:0,added:0,updated:0}}))
     try{
-      const res = await triggerSync(src, forceFull, spacesOverride, projectsOverride)
+      const res = await triggerSync(src, forceFull, spacesOverride, projectsOverride, reposOverride)
       const jobId = res.data?.job_id
       if(!jobId) return
       // Poll every 2s
@@ -808,19 +802,66 @@ export default function Dashboard() {
 
           </div>
 
-          {/* Intelligence shortcuts (3 cols) */}
+          {/* Executive summary (3 cols) */}
           <div className="col-span-12 lg:col-span-3 space-y-3">
             <span className="text-xs font-semibold uppercase tracking-widest block"
-              style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>
-              Intelligence
-            </span>
-            <Shortcut icon={AlertTriangle} label="Risk & Vendors"    sub="Dependency alerts"      accent={T.red}    onClick={()=>goTo('risk')}/>
-            <Shortcut icon={TrendingUp}    label="Velocity"          sub="12-month activity"      accent={T.teal}   onClick={()=>goTo('velocity')}/>
-            <Shortcut icon={Users}         label="Experts At Risk"   sub="Inactive SMEs"          accent={T.orange} onClick={()=>goTo('experts')}/>
-            <Shortcut icon={Activity}      label="Coverage Score"    sub="Grade A–F by system"    accent={T.gold}   onClick={()=>goTo('coverage')}/>
-            <Shortcut icon={FileText}      label="Knowledge Gaps"    sub="Undocumented systems"   accent={T.purple} onClick={()=>goTo('gaps')}/>
-            <Shortcut icon={CheckCircle2}  label="Health Report"     sub="Freshness & audit"      accent={T.green}  onClick={()=>goTo('health')}/>
-            {zeroR>0&&(
+              style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>Executive Summary</span>
+
+            {/* Health banner */}
+            <div className="rounded-xl p-4" style={{background: hasErr ? T.red+'10' : T.green+'10',
+              border:`1px solid ${hasErr ? T.red+'30' : T.green+'30'}`}}>
+              <div className="flex items-center gap-2 mb-1">
+                {hasErr
+                  ? <AlertTriangle size={14} style={{color:T.red}}/>
+                  : <CheckCircle2 size={14} style={{color:T.green}}/>}
+                <span className="text-xs font-bold" style={{color: hasErr ? T.red : T.green}}>
+                  {hasErr ? 'Sync Issues Detected' : 'All Sources Healthy'}
+                </span>
+              </div>
+              <p className="text-xs" style={{color:T.textDim}}>
+                {liveSrcs.length} live sources · {total.toLocaleString()} total docs
+              </p>
+            </div>
+
+            {/* Key metrics */}
+            <div className="rounded-xl p-4 space-y-3" style={{background:T.bgCard, border:`1px solid ${T.border}`}}>
+              <span className="text-xs font-semibold uppercase tracking-widest"
+                style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>Key Metrics</span>
+              {[
+                {label:'Total Documents',  val: total.toLocaleString(),        accent: T.teal},
+                {label:'Active Sources',   val: liveSrcs.filter(s=>s.doc_count>0).length + ' / ' + liveSrcs.length, accent: T.blue},
+                {label:'Searches (30d)',   val: searches.toLocaleString(),     accent: T.purple},
+                {label:'Knowledge Gaps',   val: zeroR,                         accent: zeroR>0 ? T.orange : T.green},
+                {label:'Experts at Risk',  val: data?.experts_at_risk ?? '—',  accent: T.red},
+              ].map(({label, val, accent}) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-xs" style={{color:T.textSec}}>{label}</span>
+                  <span className="text-sm font-bold" style={{color:accent, fontFamily:"'IBM Plex Mono',monospace"}}>{val}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Intelligence deep-links */}
+            <div className="rounded-xl p-4 space-y-2" style={{background:T.bgCard, border:`1px solid ${T.border}`}}>
+              <span className="text-xs font-semibold uppercase tracking-widest"
+                style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>Intelligence</span>
+              {[
+                {label:'Risk & Vendors',  accent:T.red,    tab:'risk'},
+                {label:'Experts at Risk', accent:T.orange, tab:'experts'},
+                {label:'Coverage Score',  accent:T.gold,   tab:'coverage'},
+                {label:'Knowledge Gaps',  accent:T.purple, tab:'gaps'},
+                {label:'Health Report',   accent:T.green,  tab:'health'},
+              ].map(({label, accent, tab}) => (
+                <button key={tab} onClick={()=>goTo(tab)}
+                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-all hover:opacity-80"
+                  style={{background:accent+'10', border:`1px solid ${accent}25`, color:accent}}>
+                  <span className="font-medium">{label}</span>
+                  <ChevronRight size={12}/>
+                </button>
+              ))}
+            </div>
+
+            {zeroR>0 && (
               <div className="rounded-xl p-3 flex items-start gap-2"
                 style={{background:T.orange+'12',border:`1px solid ${T.orange}30`}}>
                 <AlertTriangle size={13} style={{color:T.orange,marginTop:2}}/>

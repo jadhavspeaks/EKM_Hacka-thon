@@ -90,6 +90,7 @@ async def run_sync(
     force_full:  bool = False,
     spaces_override:   list[str] | None = None,
     projects_override: list[str] | None = None,
+    repos_override:    list[str] | None = None,
     on_progress: ProgressCallback | None = None,
 ) -> dict:
     """
@@ -140,6 +141,8 @@ async def run_sync(
                 kwargs["spaces_override"] = spaces_override
             if "projects_override" in sig.parameters and projects_override:
                 kwargs["projects_override"] = projects_override
+            if "repos_override" in sig.parameters and repos_override:
+                kwargs["repos_override"] = repos_override
 
             documents = await fetch_fn(**kwargs)
             total_fetched = len(documents)

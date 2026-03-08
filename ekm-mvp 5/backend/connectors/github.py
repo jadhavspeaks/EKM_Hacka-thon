@@ -445,11 +445,11 @@ def _process_pull_requests(
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-async def fetch_documents(updated_since: datetime | None = None) -> list[Document]:
+async def fetch_documents(updated_since: datetime | None = None, repos_override: list[str] | None = None) -> list[Document]:
     """
     Fetch commits, code files, and PRs from all configured GitHub repos.
     """
-    repos = _get_repos()
+    repos = repos_override if repos_override else _get_repos()
     if not repos:
         return []
 
