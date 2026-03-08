@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTheme } from '../ThemeContext'
 import { useNavigate } from 'react-router-dom'
 import { getDashboard, triggerSync, getSyncStatus, getSyncSourcesMeta, testSharePoint } from '../api'
 import { Spinner } from '../components/UI'
@@ -7,18 +8,6 @@ import { RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle,
          Users, FileText, Zap, ChevronRight, Settings, ChevronDown, ChevronUp, Check,
          Wifi, WifiOff, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
-
-const T = {
-  bg:'#f4f6f9',      bgCard:'#ffffff',  bgMid:'#f8fafc',
-  border:'#dde3ec',  borderLt:'#e8edf4',
-  blue:'#0052cc',    blueLt:'#eff6ff',  blueMid:'#dbeafe',
-  teal:'#0891b2',    tealLt:'#ecfeff',
-  orange:'#ea580c',  red:'#dc2626',     green:'#16a34a',  gold:'#d97706',
-  purple:'#7c3aed',  blueDk:'#1e40af',
-  textPri:'#0d1117', textSec:'#4a5568', textDim:'#8896a7',
-  navBg:'#ffffff',   navBorder:'#e8edf4',
-  font:"'IBM Plex Sans',sans-serif",  mono:"'IBM Plex Mono',monospace",
-}
 
 const SRC_COLORS = {
   confluence:{ color:'#7c3aed', lt:'#f5f3ff', label:'Confluence' },
@@ -34,7 +23,9 @@ const SRC = {
   sharepoint:{ label:'SharePoint', color:'#3b82f6', dot:'#3b82f6' },
 }
 
-function Spark({ values=[], color=T.teal, h=28, w=80 }) {
+function Spark({ values=[], color, h=28, w=80 }) {
+  const { T } = useTheme()
+  if (!color) color = T.teal
   if (values.length < 2) return null
   const max = Math.max(...values, 1)
   const pts = values.map((v,i)=>{
@@ -59,6 +50,7 @@ function Spark({ values=[], color=T.teal, h=28, w=80 }) {
 }
 
 function Beacon({ status }) {
+  const { T } = useTheme()
   const col = status==='success'||status==='idle' ? T.green : status==='error'||status==='failed' ? T.red : T.gold
   return (
     <span className="relative inline-flex">
@@ -71,7 +63,9 @@ function Beacon({ status }) {
   )
 }
 
-function KPI({label,value,sub,trendVal,accent=T.teal,sparkVals,onClick,icon:Icon}) {
+function KPI({label,value,sub,trendVal,accent,sparkVals,onClick,icon:Icon}) {
+  const { T } = useTheme()
+  if (!accent) accent = T.teal
   const pos=trendVal>0,neg=trendVal<0
   return (
     <div onClick={onClick}
@@ -87,7 +81,7 @@ function KPI({label,value,sub,trendVal,accent=T.teal,sparkVals,onClick,icon:Icon
             </div>
           )}
           <span className="text-xs font-medium uppercase tracking-widest"
-            style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>{label}</span>
+            style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>{label}</span>
         </div>
         {trendVal!==undefined && (
           <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded"
@@ -100,7 +94,7 @@ function KPI({label,value,sub,trendVal,accent=T.teal,sparkVals,onClick,icon:Icon
       </div>
       <div>
         <div className="text-3xl font-bold leading-none"
-          style={{color:T.textPri,fontFamily:"'DM Mono',monospace",letterSpacing:'-0.02em'}}>{value}</div>
+          style={{color:T.textPri,fontFamily:"'IBM Plex Mono',monospace",letterSpacing:'-0.02em'}}>{value}</div>
         {sub&&<div className="text-xs mt-1.5" style={{color:T.textSec}}>{sub}</div>}
       </div>
       {sparkVals?.length>1&&<div className="mt-auto"><Spark values={sparkVals} color={accent} h={24} w={90}/></div>}
@@ -110,6 +104,7 @@ function KPI({label,value,sub,trendVal,accent=T.teal,sparkVals,onClick,icon:Icon
 }
 
 function SharePointTile({src, syncing, onSync, progress}) {
+  const { T } = useTheme()
   const cfg = SRC.sharepoint
   const isSyncing = syncing === src.source_type
   const isErr = src.sync_status === 'error' || src.sync_status === 'failed'
@@ -158,7 +153,7 @@ function SharePointTile({src, syncing, onSync, progress}) {
           {src.doc_count > 0 && (
             <div>
               <div className="text-2xl font-bold"
-                style={{color:cfg.color, fontFamily:"'DM Mono',monospace", letterSpacing:'-0.02em'}}>
+                style={{color:cfg.color, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:'-0.02em'}}>
                 {src.doc_count.toLocaleString()}
               </div>
               <div className="text-xs mt-0.5" style={{color:T.textDim}}>documents</div>
@@ -268,6 +263,7 @@ function SharePointTile({src, syncing, onSync, progress}) {
 }
 
 function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
+  const { T } = useTheme()
   const cfg = SRC[src.source_type] || SRC.confluence
   const isSyncing = syncing === src.source_type
   const isErr = src.sync_status === 'error' || src.sync_status === 'failed'
@@ -339,7 +335,7 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
 
         <div>
           <div className="text-2xl font-bold"
-            style={{color:cfg.color, fontFamily:"'DM Mono',monospace", letterSpacing:'-0.02em'}}>
+            style={{color:cfg.color, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:'-0.02em'}}>
             {src.doc_count?.toLocaleString() ?? '—'}
           </div>
           <div className="text-xs mt-0.5" style={{color:T.textDim}}>documents</div>
@@ -461,20 +457,22 @@ function SourceTile({src, syncing, onSync, meta, onLoadMeta, progress}) {
 }
 
 function BarDay({day,total,max}) {
+  const { T } = useTheme()
   const pct=total/Math.max(max,1)*100
   return (
     <div className="flex flex-col items-center gap-1 flex-1">
-      <span className="text-xs" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>{total||''}</span>
+      <span className="text-xs" style={{color:T.textDim,fontFamily:"'IBM Plex Mono',monospace"}}>{total||''}</span>
       <div className="w-full rounded-sm flex flex-col justify-end" style={{height:40}}>
         <div className="w-full rounded-sm transition-all duration-700"
           style={{height:(Math.max(pct,2)+'%'),background:`linear-gradient(to top, ${T.tealDk}, ${T.teal})`}}/>
       </div>
-      <span className="text-xs" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>{day}</span>
+      <span className="text-xs" style={{color:T.textDim,fontFamily:"'IBM Plex Mono',monospace"}}>{day}</span>
     </div>
   )
 }
 
 function Shortcut({icon:Icon,label,sub,accent,onClick}) {
+  const { T } = useTheme()
   return (
     <button onClick={onClick}
       className="rounded-xl p-3.5 text-left flex items-center gap-3 w-full transition-all duration-150 hover:scale-[1.01] group"
@@ -494,8 +492,8 @@ function Shortcut({icon:Icon,label,sub,accent,onClick}) {
 }
 
 export default function Dashboard() {
+  const { T } = useTheme()
   const [data,setData]=useState(null)
-  const [analytics,setAnalytics]=useState(null)
   const [loading,setLoading]=useState(true)
   const [syncing,setSyncing]=useState(null)
   const [syncProgress,setSyncProgress]=useState({})
@@ -506,12 +504,14 @@ export default function Dashboard() {
 
   const load=async()=>{
     try {
-      const [dash,stats]=await Promise.all([
-        getDashboard(),
-        getAnalyticsStats(30).catch(()=>({data:null})),
-      ])
-      setData(dash.data); setAnalytics(stats.data)
-    } catch(e){console.error(e)} finally{setLoading(false)}
+      // v3.6+: all analytics are embedded in /api/sources — single call only
+      const dash = await getDashboard()
+      setData(dash.data)
+    } catch(e){
+      console.error('Dashboard load failed:', e)
+    } finally{
+      setLoading(false)
+    }
   }
 
   const loadMeta=async()=>{
@@ -599,7 +599,7 @@ export default function Dashboard() {
             <h1 className="text-base font-bold leading-tight" style={{color:T.textPri}}>
               Knowledge Intelligence Hub
             </h1>
-            <p className="text-xs" style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>
+            <p className="text-xs" style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>
               {tick.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
               {' · '}{lastSync?`Last sync ${formatDistanceToNow(new Date(lastSync),{addSuffix:true})}`:'Not yet synced'}
             </p>
@@ -662,7 +662,7 @@ export default function Dashboard() {
             <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold uppercase tracking-widest"
-                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>Source Composition</span>
+                  style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>Source Composition</span>
                 <span className="text-xs" style={{color:T.textDim}}>{total.toLocaleString()} total</span>
               </div>
               <div className="flex h-2 rounded-full overflow-hidden gap-px mb-4">
@@ -684,7 +684,7 @@ export default function Dashboard() {
                       <span className="w-2 h-2 rounded-full" style={{background:cfg.dot}}/>
                       <span className="text-xs" style={{color:T.textSec}}>{cfg.label}</span>
                       <span className="text-xs font-semibold"
-                        style={{color:T.textPri,fontFamily:"'DM Mono',monospace"}}>{pct}%</span>
+                        style={{color:T.textPri,fontFamily:"'IBM Plex Mono',monospace"}}>{pct}%</span>
                     </div>
                   )
                 })}
@@ -709,9 +709,9 @@ export default function Dashboard() {
             <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold uppercase tracking-widest"
-                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>Docs by Source</span>
+                  style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>Docs by Source</span>
                 <span className="text-xs font-bold"
-                  style={{color:T.teal,fontFamily:"'DM Mono',monospace"}}>{total.toLocaleString()} total</span>
+                  style={{color:T.teal,fontFamily:"'IBM Plex Mono',monospace"}}>{total.toLocaleString()} total</span>
               </div>
               <div className="space-y-3">
                 {liveSrcs.map((s,i)=>{
@@ -721,7 +721,7 @@ export default function Dashboard() {
                     <div key={i}>
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-xs font-medium" style={{color:T.textSec}}>{cfg.label}</span>
-                        <span className="text-sm font-bold" style={{color:cfg.color,fontFamily:"'DM Mono',monospace"}}>
+                        <span className="text-sm font-bold" style={{color:cfg.color,fontFamily:"'IBM Plex Mono',monospace"}}>
                           {(s.doc_count||0).toLocaleString()}
                         </span>
                       </div>
@@ -739,9 +739,9 @@ export default function Dashboard() {
             <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold uppercase tracking-widest"
-                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>7-Day Search Volume</span>
+                  style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>7-Day Search Volume</span>
                 <span className="text-xs font-bold"
-                  style={{color:T.teal,fontFamily:"'DM Mono',monospace"}}>
+                  style={{color:T.teal,fontFamily:"'IBM Plex Mono',monospace"}}>
                   {dailyVals.reduce((a,b)=>a+b,0)}
                 </span>
               </div>
@@ -763,7 +763,7 @@ export default function Dashboard() {
             <div className="rounded-xl p-4" style={{background:T.bgCard,border:`1px solid ${T.border}`}}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold uppercase tracking-widest"
-                  style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>Top Queries</span>
+                  style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>Top Queries</span>
                 <button onClick={()=>goTo('analytics')}
                   className="text-xs flex items-center gap-0.5 hover:opacity-80"
                   style={{color:T.teal}}>all<ChevronRight size={11}/></button>
@@ -773,11 +773,11 @@ export default function Dashboard() {
                   {topQ.map((q,i)=>(
                     <div key={i} className="flex items-center gap-2">
                       <span className="w-4 h-4 rounded flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{background:T.teal+'20',color:T.teal,fontFamily:"'DM Mono',monospace"}}>
+                        style={{background:T.teal+'20',color:T.teal,fontFamily:"'IBM Plex Mono',monospace"}}>
                         {i+1}
                       </span>
                       <span className="text-sm flex-1 truncate" style={{color:T.textPri}}>{q.query}</span>
-                      <span className="text-xs shrink-0" style={{color:T.textDim,fontFamily:"'DM Mono',monospace"}}>
+                      <span className="text-xs shrink-0" style={{color:T.textDim,fontFamily:"'IBM Plex Mono',monospace"}}>
                         {q.count}×
                       </span>
                     </div>
@@ -796,7 +796,7 @@ export default function Dashboard() {
           {/* Intelligence shortcuts (3 cols) */}
           <div className="col-span-12 lg:col-span-3 space-y-3">
             <span className="text-xs font-semibold uppercase tracking-widest block"
-              style={{color:T.textSec,fontFamily:"'DM Mono',monospace"}}>
+              style={{color:T.textSec,fontFamily:"'IBM Plex Mono',monospace"}}>
               Intelligence
             </span>
             <Shortcut icon={AlertTriangle} label="Risk & Vendors"    sub="Dependency alerts"      accent={T.red}    onClick={()=>goTo('risk')}/>

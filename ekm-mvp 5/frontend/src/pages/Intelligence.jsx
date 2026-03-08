@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTheme } from '../ThemeContext'
 import { useLocation } from 'react-router-dom'
 import { getDashboard, getAnalyticsStats, getHealthReport, getRiskReport, getOnboardingPath, getKnowledgeGaps, getExpertsAtRisk, getCoverageReport, getVelocity, getHandover, getHandoverProgress, saveHandoverProgress, searchPeople, getPersonProfile, getConfig } from '../api'
 import { Spinner, SourceBadge } from '../components/UI'
@@ -52,6 +53,7 @@ function TeamsButton({ name, domain }) {
 }
 
 function StatCard({ label, value, sub, color = 'text-navy-800' }) {
+  const { T } = useTheme()
   return (
     <div className="card p-4 text-center">
       <div className={`text-3xl font-bold ${color}`}>{value}</div>
@@ -62,6 +64,7 @@ function StatCard({ label, value, sub, color = 'text-navy-800' }) {
 }
 
 function SectionTitle({ children, sub }) {
+  const { T } = useTheme()
   return (
     <div className="mb-4">
       <h2 className="text-lg font-bold text-gray-900">{children}</h2>
@@ -72,6 +75,7 @@ function SectionTitle({ children, sub }) {
 
 // ── Analytics Tab ─────────────────────────────────────────────────────────────
 function AnalyticsTab() {
+  const { T } = useTheme()
   const [searchData, setSearchData] = useState(null)
   const [corpusData, setCorpusData] = useState(null)
   const [loading, setLoading]       = useState(true)
@@ -408,6 +412,7 @@ function AnalyticsTab() {
 
 
 function HealthTab() {
+  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -520,6 +525,7 @@ function HealthTab() {
 
 // ── Risk Tab ──────────────────────────────────────────────────────────────────
 function RiskTab({ teamsDomain }) {
+  const { T } = useTheme()
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState('all')
@@ -669,6 +675,7 @@ function RiskTab({ teamsDomain }) {
 
 // ── People Tab ────────────────────────────────────────────────────────────────
 function PeopleTab({ teamsDomain }) {
+  const { T } = useTheme()
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -859,6 +866,7 @@ function PeopleTab({ teamsDomain }) {
 
 // ── Onboarding Tab ────────────────────────────────────────────────────────────
 function OnboardingTab() {
+  const { T } = useTheme()
   const [topic, setTopic]     = useState('')
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
@@ -966,6 +974,7 @@ function OnboardingTab() {
 
 // ── Knowledge Gaps Tab ────────────────────────────────────────────────────────
 function GapsTab() {
+  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -1043,6 +1052,7 @@ function GapsTab() {
 
 // ── Experts At Risk Tab ───────────────────────────────────────────────────────
 function ExpertsAtRiskTab({ teamsDomain }) {
+  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -1134,6 +1144,7 @@ function ExpertsAtRiskTab({ teamsDomain }) {
 
 // ── Coverage Tab ──────────────────────────────────────────────────────────────
 function CoverageTab() {
+  const { T } = useTheme()
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -1239,6 +1250,7 @@ function CoverageTab() {
 
 // ── Knowledge Velocity Tab ───────────────────────────────────────────────────
 function VelocityTab() {
+  const { T } = useTheme()
   const [input, setInput]     = useState('')
   const [topic, setTopic]     = useState('')
   const [data, setData]       = useState(null)
@@ -1380,6 +1392,7 @@ function VelocityTab() {
 
 // ── Handover Tracker Tab ──────────────────────────────────────────────────────
 function HandoverTab({ teamsDomain }) {
+  const { T } = useTheme()
   const [name, setName]       = useState('')
   const [input, setInput]     = useState('')
   const [data, setData]       = useState(null)
@@ -1606,6 +1619,7 @@ const TAB_META = {
 }
 
 export default function Intelligence() {
+  const { T } = useTheme()
   const location = useLocation()
   const [tab, setTab]                 = useState(location.state?.tab || 'analytics')
   const [teamsDomain, setTeamsDomain] = useState('citi.com')
@@ -1625,14 +1639,14 @@ export default function Intelligence() {
   return (
     <div className="flex gap-0 h-full min-h-screen" style={{height:'calc(100vh - 0px)'}}>
       {/* ── Sidebar ── */}
-      <aside className="w-56 shrink-0 flex flex-col pt-5 pb-8 overflow-y-auto" style={{background:"#ffffff",borderRight:"1px solid #dde3ec"}}>
+      <aside className="w-56 shrink-0 flex flex-col pt-5 pb-8 overflow-y-auto" style={{background:T.navBg,borderRight:`1px solid ${T.navBorder}`}}>
         <div className="px-4 mb-5">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{color:"#8896a7",fontFamily:"'IBM Plex Mono',monospace"}}>Intelligence</p>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{color:T.navText,fontFamily:T.mono}}>Intelligence</p>
         </div>
 
         {NAV_GROUPS.map(group => (
           <div key={group.group} className="mb-5">
-            <p className="px-4 text-xs font-semibold uppercase tracking-wider mb-1" style={{color:"#aab4c0",fontFamily:"'IBM Plex Mono',monospace"}}>
+            <p className="px-4 text-xs font-semibold uppercase tracking-wider mb-1" style={{color:T.navText,fontFamily:T.mono,opacity:0.7}}>
               {group.group}
             </p>
             {group.items.map(item => {
@@ -1641,17 +1655,15 @@ export default function Intelligence() {
                 <button
                   key={item.id}
                   onClick={() => setTab(item.id)}
-                  style={active ? {background:'#eff6ff',borderLeft:'3px solid #0052cc',paddingLeft:'13px'} : {borderLeft:'3px solid transparent'}}
+                  style={active ? {background:T.navActiveBg,borderLeft:`3px solid ${T.navActive}`,paddingLeft:'13px',color:T.navActive} : {borderLeft:'3px solid transparent',color:T.navText}}
                   className={`w-full text-left px-4 py-2.5 flex items-start gap-2.5 transition-colors ${
-                    active
-                      ? 'text-blue-700 font-semibold'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    active ? 'font-semibold' : 'hover:opacity-80'
                   }`}
                 >
                   <span className="text-base leading-none mt-0.5">{item.icon}</span>
                   <span>
                     <span className="block text-sm font-medium leading-tight">{item.label}</span>
-                    <span className={`block text-xs leading-tight mt-0.5 ${active ? 'text-blue-500' : 'text-gray-400'}`}>
+                    <span className={`block text-xs leading-tight mt-0.5`}>
                       {item.sub}
                     </span>
                   </span>
@@ -1663,10 +1675,10 @@ export default function Intelligence() {
       </aside>
 
       {/* ── Content area ── */}
-      <main className="flex-1 overflow-y-auto p-6" style={{background:"#f4f6f9"}}>
+      <main className="flex-1 overflow-y-auto p-6" style={{background:T.bg}}>
         {/* Content header */}
-        <div className="mb-5 pb-4" style={{borderBottom:"1px solid #dde3ec"}}>
-          <h1 className="text-xl font-bold" style={{color:"#0d1117",fontFamily:"'IBM Plex Sans',sans-serif"}}>{meta.title}</h1>
+        <div className="mb-5 pb-4" style={{borderBottom:`1px solid ${T.border}`}}>
+          <h1 className="text-xl font-bold" style={{color:T.textPri,fontFamily:T.font}}>{meta.title}</h1>
           <p className="text-sm text-gray-400 mt-0.5">{meta.desc}</p>
         </div>
 

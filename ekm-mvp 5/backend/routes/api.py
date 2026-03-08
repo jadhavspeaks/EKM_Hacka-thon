@@ -255,8 +255,8 @@ async def get_sources():
     # ── 1. Per-source stats ───────────────────────────────────────────────────
     async def _src_stats(src):
         count, last_log = await asyncio.gather(
-            db.documents.count_documents({"source_type": src}),
-            db.sync_logs.find_one({"source_type": src}, sort=[("started_at", -1)]),
+            db.documents.count_documents({"source_type": str(src.value if hasattr(src,"value") else src)}),
+            db.sync_logs.find_one({"source_type": str(src.value if hasattr(src,"value") else src)}, sort=[("started_at", -1)]),
         )
         status    = last_log.get("status", SyncStatus.NEVER) if last_log else SyncStatus.NEVER
         last_sync = (last_log.get("finished_at") or last_log.get("started_at")) if last_log else None

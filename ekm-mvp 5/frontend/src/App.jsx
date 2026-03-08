@@ -1,19 +1,11 @@
-import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink } from 'react-router-dom'
 import { LayoutDashboard, Search, FileText, Lightbulb } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import SearchPage from './pages/Search'
 import Documents from './pages/Documents'
 import Intelligence from './pages/Intelligence'
-import NewJoiner from './pages/NewJoiner'
-import GlobalSearch from './components/GlobalSearch'
-
-// ── Arctic theme tokens — Option A: white sidebar, IBM Blue accent ───────────
-const NAV_BG      = '#ffffff'   // white sidebar
-const NAV_BORDER  = '#e8edf4'   // cool gray border
-const NAV_TEXT    = '#4a5568'   // slate-600
-const NAV_ACTIVE  = '#0052cc'   // IBM Blue text when active
-const NAV_ACCENT  = '#0052cc'   // IBM Blue
-const LOGO_BG     = 'linear-gradient(135deg,#0052cc,#0891b2)'
+import { ThemeProvider, useTheme } from './ThemeContext'
+import ThemeToggle from './ThemeToggle'
 
 const NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },
@@ -22,63 +14,65 @@ const NAV = [
   { to: '/intelligence', icon: Lightbulb,       label: 'Intelligence' },
 ]
 
+const LOGO_BG = 'linear-gradient(135deg,#0052cc,#0891b2)'
+
 function AppShell() {
+  const { T } = useTheme()
+
   return (
-    <div className="flex h-screen overflow-hidden" style={{background:'#f4f6f9',fontFamily:"'IBM Plex Sans',sans-serif"}}>
+    <div className="flex h-screen overflow-hidden"
+      style={{ background: T.bg, fontFamily: T.font }}>
 
       {/* ── Sidebar ── */}
-      <aside className="w-56 flex flex-col shrink-0"
-        style={{background: NAV_BG, borderRight:`1px solid ${NAV_BORDER}`}}>
+      <aside className="w-52 flex flex-col shrink-0"
+        style={{ background: T.navBg, borderRight: `1px solid ${T.navBorder}` }}>
 
         {/* Logo */}
-        <div className="px-5 py-5" style={{borderBottom:`1px solid ${NAV_BORDER}`}}>
+        <div className="px-4 py-4" style={{ borderBottom: `1px solid ${T.navBorder}` }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{background: LOGO_BG}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: LOGO_BG }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white"
+                strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                 <path d="M2 17l10 5 10-5"/>
                 <path d="M2 12l10 5 10-5"/>
               </svg>
             </div>
             <div>
-              <p className="font-bold text-sm leading-tight" style={{color:'#0d1117'}}>EKM</p>
-              <p className="text-xs" style={{color:NAV_TEXT}}>Knowledge Hub</p>
+              <p className="font-bold text-sm leading-tight"
+                style={{ color: T.id === 'slate' ? '#e8edf2' : T.textPri }}>EKM</p>
+              <p className="text-xs" style={{ color: T.navText }}>Knowledge Hub</p>
             </div>
           </div>
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               style={({ isActive }) => ({
-                background: isActive ? '#eff6ff' : 'transparent',
-                color:      isActive ? NAV_ACTIVE : NAV_TEXT,
-                border:     isActive ? `1px solid #dbeafe` : '1px solid transparent',
+                background:  isActive ? T.navActiveBg  : 'transparent',
+                color:       isActive ? T.navActive     : T.navText,
+                border:      isActive ? `1px solid ${T.navActiveBorder}` : '1px solid transparent',
               })}
             >
-              <Icon size={17} />
+              <Icon size={16} />
               {label}
             </NavLink>
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-4" style={{borderTop:`1px solid ${NAV_BORDER}`}}>
-          <div className="flex items-center gap-2 mb-1">
+        <div className="px-4 py-3" style={{ borderTop: `1px solid ${T.navBorder}` }}>
+          <div className="flex items-center gap-2 mb-2">
             <span className="w-2 h-2 rounded-full animate-pulse"
-              style={{background: NAV_ACCENT}} />
-            <span className="text-xs" style={{color:NAV_TEXT}}>MVP v3.7</span>
+              style={{ background: '#0052cc' }} />
+            <span className="text-xs" style={{ color: T.navText }}>MVP v3.8</span>
           </div>
-          <p className="text-xs" style={{color:'#475569'}}>
-            Press{' '}
-            <kbd className="px-1 rounded text-xs"
-              style={{background:'#f1f5f9', color:'#4a5568'}}>/</kbd>
-            {' '}to search
-          </p>
+          {/* Theme toggle in sidebar footer */}
+          <ThemeToggle />
         </div>
       </aside>
 
@@ -97,12 +91,8 @@ function AppShell() {
 
 export default function App() {
   return (
-    <>
-      <GlobalSearch />
-      <Routes>
-        <Route path="/join/:topic" element={<NewJoiner />} />
-        <Route path="/*"           element={<AppShell />} />
-      </Routes>
-    </>
+    <ThemeProvider>
+      <AppShell />
+    </ThemeProvider>
   )
 }

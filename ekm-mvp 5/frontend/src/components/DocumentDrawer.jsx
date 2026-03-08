@@ -309,6 +309,7 @@ function GenericLayout({ doc }) {
 // MAIN DRAWER
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DocumentDrawer({ docId, onClose }) {
+  const { T } = useTheme()
   const [doc, setDoc]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTheme } from '../ThemeContext'
 import { searchDocs, getPersonProfile } from '../api'
 import { SourceBadge, EmptyState, Spinner, TeamsButton } from '../components/UI'
 import {
@@ -21,6 +22,7 @@ const ROLE_ICONS = {
 
 // ── Person Profile Banner (intent detected) ──────────────────────────────────
 function PersonBanner({ name, onClose }) {
+  const { T } = useTheme()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -129,13 +131,14 @@ function PersonBanner({ name, onClose }) {
 
 // ── Compact SME sidebar ───────────────────────────────────────────────────────
 function SMESidebar({ smes }) {
+  const { T } = useTheme()
   const [expanded, setExpanded] = useState(false)
   if (!smes?.length) return null
   const visible = expanded ? smes : smes.slice(0, 3)
   const maxScore = smes[0]?.score || 1
 
   return (
-    <div className="rounded-xl overflow-hidden sticky top-4" style={{background:"#ffffff", border:"1px solid #dde3ec", boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}>
+    <div className="rounded-xl overflow-hidden sticky top-4" style={{background:T.bgCard, border:`1px solid ${T.border}`, boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}>
       {/* Header */}
       <div className="px-4 py-3 flex items-center justify-between" style={{borderBottom:"1px solid #1a3050", background:"#061829"}}>
         <div className="flex items-center gap-2">
@@ -201,6 +204,7 @@ function SMESidebar({ smes }) {
 
 // ── Best Answer snippet ───────────────────────────────────────────────────────
 function BestAnswer({ answer }) {
+  const { T } = useTheme()
   if (!answer?.trim()) return null
   return (
     <div className="flex gap-3 bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4">
@@ -217,11 +221,12 @@ function BestAnswer({ answer }) {
 
 // ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ doc, onClick }) {
+  const { T } = useTheme()
   const m = doc.metadata || {}
   const preview = doc.content_preview || doc.content?.slice(0, 200) || ''
 
   return (
-    <div className="rounded-xl p-4 cursor-pointer transition-all" style={{background:"#ffffff", border:"1px solid #dde3ec", boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}
+    <div className="rounded-xl p-4 cursor-pointer transition-all" style={{background:T.bgCard, border:`1px solid ${T.border}`, boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}
       onClick={onClick}>
       <div className="flex items-start gap-3">
         <div className="shrink-0 mt-0.5">
@@ -289,12 +294,13 @@ function ResultCard({ doc, onClick }) {
 
 // ── GitHub card ───────────────────────────────────────────────────────────────
 function GitHubCard({ doc, onClick }) {
+  const { T } = useTheme()
   const m = doc.metadata || {}
   const ct = m.content_type || 'commit'
   const Icon = ct === 'pull_request' ? GitBranch : ct === 'commit' ? MessageSquare : FileText
 
   return (
-    <div className="rounded-xl p-4 cursor-pointer transition-all" style={{background:"#ffffff", border:"1px solid #dde3ec", boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}
+    <div className="rounded-xl p-4 cursor-pointer transition-all" style={{background:T.bgCard, border:`1px solid ${T.border}`, boxShadow:"0 1px 2px rgba(0,0,0,0.05)", borderRadius:"12px"}}
       onClick={onClick}>
       <div className="flex items-start gap-3">
         <div className="shrink-0 mt-0.5 w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center">
@@ -337,6 +343,7 @@ function GitHubCard({ doc, onClick }) {
 
 // ── Section header ─────────────────────────────────────────────────────────────
 function SectionHeader({ color, label, count, icon: Icon }) {
+  const { T } = useTheme()
   return (
     <div className="flex items-center gap-2 mb-3">
       <div className="w-1 h-4 rounded-full" style={{ background: color }}/>
@@ -411,12 +418,12 @@ export default function SearchPage() {
   const otherDocs = sorted.filter(d => d.source_type !== 'confluence')
 
   return (
-    <div className="min-h-full" style={{background:"#f4f6f9"}}>
+    <div className="min-h-full" style={{background:T.bg}}>
 
       {/* ── Search header ── */}
       <div className="px-6 py-5" style={{background:"#0d1f35", borderBottom:"1px solid #1a3050"}}>
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-lg font-bold mb-1" style={{color:"#0f172a"}}>Search</h1>
+          <h1 className="text-lg font-bold mb-1" style={{color:T.textPri}}>Search</h1>
           <p className="text-xs mb-4" style={{color:"#64748b"}}>BM25 · entity extraction · SME ranking · Confluence-first</p>
 
           {/* Search bar */}
@@ -429,7 +436,7 @@ export default function SearchPage() {
                   value={inputVal}
                   onChange={e => setInputVal(e.target.value)}
                   placeholder='Search knowledge base… or try "what Jadhav has worked on"'
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm focus:outline-none transition-all" style={{background:"#07111f", border:"1px solid #1a3050", color:"#e2e8f0"}}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm focus:outline-none transition-all" style={{background:T.bgMid, border:`1px solid ${T.border}`, color:T.textPri, fontFamily:T.font}}
                 />
                 {inputVal && (
                   <button type="button" onClick={clear}
