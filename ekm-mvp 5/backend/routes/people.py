@@ -15,16 +15,17 @@ from database import get_db
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/people", tags=["people"])
 
-VENDOR_PATTERN = re.compile(r'\[TECH NE\]', re.IGNORECASE)
-INTERNAL_PATTERN = re.compile(r'\[TECH\]', re.IGNORECASE)
+_VENDOR_RE = re.compile(r'\[[^\]]*\bNE\]', re.IGNORECASE)
 
 
 def _classify_person(name: str) -> str:
-    if VENDOR_PATTERN.search(name):
+    """vendor if bracket ends in NE (e.g. [BKG NE], [TECH NE]), internal for everyone else."""
+    n = (name or "").strip()
+    if not n:
+        return "unknown"
+    if _VENDOR_RE.search(n):
         return "vendor"
-    if INTERNAL_PATTERN.search(name):
-        return "internal"
-    return "unknown"
+    return "internal"
 
 
 def _format_date(d) -> str | None:
