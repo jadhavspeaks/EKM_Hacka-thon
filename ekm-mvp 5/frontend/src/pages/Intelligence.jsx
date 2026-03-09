@@ -38,7 +38,7 @@ const RISK_ICON = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' 
 const HEALTH_COLOR = { good: 'text-blue-700', warning: 'text-yellow-600', poor: 'text-red-600' }
 const HEALTH_ICON  = { good: '✅', warning: '⚠️', poor: '❌' }
 
-// Teams deep link — opens a chat with the person
+// Teams deep link -- opens a chat with the person
 function teamsLink(name, domain) {
   // Convert "Gandhi, Mihir [TECH]" → "mihir.gandhi@citi.com" (best effort)
   const clean = name
@@ -151,7 +151,7 @@ function AnalyticsTab() {
           </div>
         </div>
 
-        {/* Source breakdown — prominent cards */}
+        {/* Source breakdown -- prominent cards */}
         <div className="grid grid-cols-3 gap-3 mb-3">
           {sources.map(s => {
             const cfg = SRC_CFG[s.source_type] || SRC_CFG.confluence
@@ -305,7 +305,7 @@ function AnalyticsTab() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-16 text-xs text-slate-400 bg-slate-50 rounded-lg">
-                  All searches logged today — chart builds over time
+                  All searches logged today -- chart builds over time
                 </div>
               )}
             </div>
@@ -345,10 +345,10 @@ function AnalyticsTab() {
 
               <div className="card p-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-1">⚠️ Knowledge Gaps</h3>
-                <p className="text-xs text-slate-400 mb-3">Queries that found nothing — document these</p>
+                <p className="text-xs text-slate-400 mb-3">Queries that found nothing -- document these</p>
                 {data.zero_result_queries?.length === 0 ? (
                   <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
-                    ✅ All searches returned results — no gaps detected
+                    ✅ All searches returned results -- no gaps detected
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -487,7 +487,7 @@ function HealthTab() {
 
       {/* Knowledge audit */}
       <div className="card p-4">
-        <SectionTitle sub="How well are Jira tickets documented in Confluence?">Knowledge Audit — Jira ↔ Confluence</SectionTitle>
+        <SectionTitle sub="How well are Jira tickets documented in Confluence?">Knowledge Audit -- Jira ↔ Confluence</SectionTitle>
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <div className="w-full bg-gray-100 rounded-full h-4">
@@ -610,7 +610,7 @@ function RiskTab({ teamsDomain }) {
         {topics.length === 0 && <p className="text-sm text-gray-400">No topics match this filter.</p>}
         {topics.map(topic => (
           <div key={topic.topic} className={`card border ${RISK_COLOR[topic.risk_level]}`}>
-            {/* Header — always visible */}
+            {/* Header -- always visible */}
             <div className="p-4 cursor-pointer" onClick={() => toggleExpand(topic.topic)}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
@@ -653,7 +653,7 @@ function RiskTab({ teamsDomain }) {
               </div>
             </div>
 
-            {/* Expanded — source documents */}
+            {/* Expanded -- source documents */}
             {expanded[topic.topic] && topic.top_docs?.length > 0 && (
               <div className="border-t border-gray-100 px-4 py-3 bg-gray-50 rounded-b-lg">
                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Source Documents</p>
@@ -770,7 +770,7 @@ function PeopleTab({ teamsDomain }) {
             </div>
           )}
 
-          {/* By source — static display only */}
+          {/* By source -- static display only */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Contributions by Source</h3>
             <div className="flex flex-wrap gap-3">
@@ -786,7 +786,7 @@ function PeopleTab({ teamsDomain }) {
             </div>
           </div>
 
-          {/* Top topics — display only */}
+          {/* Top topics -- display only */}
           {profile.top_topics?.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold mb-2" style={{color:T.textSec}}>Top Topics</h3>
@@ -913,9 +913,9 @@ function OnboardingTab() {
   return (
     <div className="space-y-4">
       <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 text-sm text-teal-800">
-        <strong>🎓 Learning Path Generator</strong> — Enter any topic or system name.
+        <strong>🎓 Learning Path Generator</strong> -- Enter any topic or system name.
         EKM builds a structured reading path: Confluence docs first, then process docs, then code reference.
-        Jira tickets are shown last as reference only — not primary learning material.
+        Jira tickets are shown last as reference only -- not primary learning material.
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -939,7 +939,7 @@ function OnboardingTab() {
         </a>
         {data?.total > 0 && (
           <button type="button"
-            onClick={() => { const url = `${window.location.origin}/learn?topics=${encodeURIComponent(topic)}`; navigator.clipboard.writeText(url).then(()=>alert('✓ Link copied! Share with new joiners — they can add more topics too.')).catch(()=>{ prompt('Copy this link:', url) }) }}
+            onClick={() => { const url = `${window.location.origin}/learn?topics=${encodeURIComponent(topic)}`; navigator.clipboard.writeText(url).then(()=>alert('✓ Link copied! Share with new joiners -- they can add more topics too.')).catch(()=>{ prompt('Copy this link:', url) }) }}
             className="text-sm bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 px-3 rounded-lg transition-colors"
             title="Open full learning path builder">
             🔗 Open Full Builder
@@ -952,7 +952,7 @@ function OnboardingTab() {
       {data && !loading && (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Learning path for <strong>"{data.topic}"</strong> — {data.total} documents across {data.sections?.length} source{data.sections?.length !== 1 ? 's' : ''}
+            Learning path for <strong>"{data.topic}"</strong> -- {data.total} documents across {data.sections?.length} source{data.sections?.length !== 1 ? 's' : ''}
           </p>
 
           {data.sections?.length === 0 && (
@@ -966,7 +966,7 @@ function OnboardingTab() {
                 <span className="text-xs text-gray-500">{section.docs.length} doc{section.docs.length !== 1 ? 's' : ''}</span>
                 {section.is_reference && (
                   <span className="text-xs bg-orange-100 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full ml-auto">
-                    Reference only — not primary reading
+                    Reference only -- not primary reading
                   </span>
                 )}
               </div>
@@ -1026,7 +1026,7 @@ function GapsTab() {
   return (
     <div className="space-y-5">
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-        <strong>🕳️ Knowledge Gaps</strong> — Systems and projects that have active Jira tickets or GitHub activity
+        <strong>🕳️ Knowledge Gaps</strong> -- Systems and projects that have active Jira tickets or GitHub activity
         but <strong>zero documentation</strong> in Confluence or SharePoint. These are your blind spots.
       </div>
 
@@ -1038,7 +1038,7 @@ function GapsTab() {
 
       {data.gaps?.length === 0 ? (
         <div className="text-center py-10 text-blue-700">
-          ✅ No knowledge gaps detected — all active systems have documentation!
+          ✅ No knowledge gaps detected -- all active systems have documentation!
         </div>
       ) : (
         <div className="space-y-3">
@@ -1103,7 +1103,7 @@ function ExpertsAtRiskTab({ teamsDomain }) {
   return (
     <div className="space-y-5">
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
-        <strong>⚠️ Expert Knowledge At Risk</strong> — Contributors who haven't been active in 90+ days,
+        <strong>⚠️ Expert Knowledge At Risk</strong> -- Contributors who haven't been active in 90+ days,
         or external vendors whose knowledge leaves when their contract ends.
         Act before the knowledge is gone.
       </div>
@@ -1205,7 +1205,7 @@ function CoverageTab() {
   return (
     <div className="space-y-5">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-        <strong>📊 Documentation Coverage Score</strong> — How well documented is each system?
+        <strong>📊 Documentation Coverage Score</strong> -- How well documented is each system?
         Scored 0–100: Confluence (40pts) + SharePoint (30pts) + GitHub files (20pts) + Jira (10pts).
         Worst scores shown first.
       </div>
@@ -1313,7 +1313,7 @@ function VelocityTab() {
   return (
     <div className="space-y-5">
       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm text-indigo-800">
-        <strong>📈 Knowledge Velocity</strong> — See how knowledge activity trends over time.
+        <strong>📈 Knowledge Velocity</strong> -- See how knowledge activity trends over time.
         Trending up = healthy, growing system. Trending down = knowledge going stale or team moving on.
       </div>
 
@@ -1368,7 +1368,7 @@ function VelocityTab() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-700">
-                Monthly Activity — {topic || 'All Topics'}
+                Monthly Activity -- {topic || 'All Topics'}
               </h3>
               <span className="text-xs text-gray-400">
                 {data.total.toLocaleString()} docs · {data.series?.length} months
@@ -1465,7 +1465,7 @@ function HandoverTab({ teamsDomain }) {
   return (
     <div className="space-y-4">
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-sm text-orange-800">
-        <strong>📦 Handover Tracker</strong> — Search for a person to generate their full handover pack.
+        <strong>📦 Handover Tracker</strong> -- Search for a person to generate their full handover pack.
         Tick items off as knowledge is transferred. Progress is saved automatically.
       </div>
 
@@ -1595,7 +1595,7 @@ function HandoverTab({ teamsDomain }) {
 }
 
 
-// ── Main Intelligence Page — Sidebar Layout ──────────────────────────────────
+// ── Main Intelligence Page -- Sidebar Layout ──────────────────────────────────
 
 const NAV_GROUPS = [
   {
@@ -1641,7 +1641,7 @@ const TAB_META = {
   coverage:   { title: 'Coverage Score',          desc: 'Documentation completeness graded A–F per system' },
   handover:   { title: 'Handover Tracker',        desc: 'Structured knowledge transfer checklist with saved progress' },
   people:     { title: 'People',                  desc: 'Contributor profiles, topic ownership, and team classification' },
-  onboarding: { title: 'Learning Path',           desc: 'Curated reading path for any system — shareable URL' },
+  onboarding: { title: 'Learning Path',           desc: 'Curated reading path for any system -- shareable URL' },
 }
 
 export default function Intelligence() {
