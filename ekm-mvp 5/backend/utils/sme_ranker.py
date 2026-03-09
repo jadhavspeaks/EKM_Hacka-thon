@@ -25,31 +25,19 @@ import re
 from datetime import datetime, timezone
 from collections import defaultdict
 
-# Mirror the classification logic from intelligence.py
-# so SME cards show correct Vendor / Internal label
-_NE_PATTERN       = re.compile(r'\[[^\]]*\bNE\]\s*$|\s+NE\s*$', re.IGNORECASE)
-_INTERNAL_PATTERN = re.compile(r'\[[^\]]*\bTECH\b[^\]]*\]', re.IGNORECASE)
+# Classification: bracket ending in NE = vendor, everything else = internal
+# Matches logic in intelligence.py _classify()
+# Examples: [BKG NE] → vendor, [BKG] → internal, no bracket → internal
+_VENDOR_RE = re.compile(r'\[[^\]]*\bNE\]', re.IGNORECASE)
 
 def _classify_name(name: str) -> str:
-    """Return 'vendor', 'internal', or 'unknown' based on name brackets."""
-    if not name:
-        return "unknown"
-    if _NE_PATTERN.search(name):
-        return "vendor"
-    if _INTERNAL_PATTERN.search(name):
-        return "internal"
-    return "unknown"
-
-
-# Mirrors intelligence.py classification — keep in sync
-_VENDOR_RE   = _re.compile(r'\[.*\bNE\b.*\]|\s+NE$', _re.IGNORECASE)
-_INTERNAL_RE = _re.compile(r'\[[^\]]*\bTECH\b[^\]]*\]', _re.IGNORECASE)
-
-def _classify_name(name: str) -> str:
+    """vendor if bracket ends in NE, internal for everyone else."""
     n = (name or "").strip()
-    if _VENDOR_RE.search(n):   return "vendor"
-    if _INTERNAL_RE.search(n): return "internal"
-    return "unknown"
+    if not n:
+        return "unknown"
+    if _VENDOR_RE.search(n):
+        return "vendor"
+    return "internal"
 
 
 def _recency_multiplier(updated_at) -> float:
@@ -243,18 +231,5 @@ def rank_smes(documents: list[dict]) -> list[dict]:
 
     # Sort by score descending, then by doc_count as tiebreaker
     smes.sort(key=lambda x: (x["score"], x["doc_count"]), reverse=True)
-
-    # Add vendor/internal type classification based on name suffix
-    import re as _re
-    _VP = _re.compile(r'\[.*\bNE\b.*\]|\s+NE$', _re.IGNORECASE)
-    _IP = _re.compile(r'\[[^\]]*\bTECH\b[^\]]*\]', _re.IGNORECASE)
-    for sme in smes:
-        n = sme["name"]
-        if _VP.search(n):
-            sme["type"] = "vendor"
-        elif _IP.search(n):
-            sme["type"] = "internal"
-        else:
-            sme["type"] = "unknown"
 
     return smes[:5]   # top 5 SMEs

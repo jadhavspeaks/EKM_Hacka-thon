@@ -127,12 +127,15 @@ def _build_profile(name: str, docs: list[dict]) -> dict:
                 "source": d.get("source", ""),
                 "url": d.get("url", ""),
                 "updated_at": _format_date(d.get("updated_at")),
+                "tags": [t for t in (d.get("tags") or [])
+                         if t not in ("jira","confluence","sharepoint","github",
+                                      "commit","pull_request","page","file")],
             }
             for d in sorted(
                 docs,
                 key=lambda x: x.get("updated_at") or x.get("ingested_at") or datetime.min,
                 reverse=True
-            )[:10]
+            )[:30]
         ]
     }
 

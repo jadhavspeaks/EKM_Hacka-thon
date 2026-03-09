@@ -693,10 +693,11 @@ function RiskTab({ teamsDomain }) {
 
 // ── People Tab ────────────────────────────────────────────────────────────────
 function PeopleTab({ teamsDomain }) {
-  const [query, setQuery]     = useState('')
-  const [results, setResults] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [query, setQuery]       = useState('')
+  const [results, setResults]   = useState(null)
+  const [profile, setProfile]   = useState(null)
+  const [loading, setLoading]   = useState(false)
+  const [activeTopic, setActiveTopic] = useState(null)
 
   const handleSearch = async (e) => {
     e.preventDefault()
@@ -757,7 +758,7 @@ function PeopleTab({ teamsDomain }) {
                 {profile.total_docs} documents · Last active: {profile.last_active || 'unknown'}
               </p>
             </div>
-            <button onClick={() => setProfile(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕ Back</button>
+            <button onClick={() => { setProfile(null); setActiveTopic(null) }} className="text-gray-400 hover:text-gray-600 text-sm">✕ Back</button>
           </div>
 
           {/* Roles */}
@@ -788,33 +789,69 @@ function PeopleTab({ teamsDomain }) {
           {/* Top topics — CLICKABLE → triggers search for that topic */}
           {profile.top_topics?.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Top Topics <span className="text-xs text-gray-400 font-normal">— click to search</span>
+              <h3 className="text-sm font-semibold mb-2" style={{color:T.textSec}}>
+                Top Topics
+                <span className="text-xs font-normal ml-1.5" style={{color:T.textDim}}>
+                  — click to filter contributions below
+                </span>
               </h3>
               <div className="flex flex-wrap gap-2">
-                {profile.top_topics.map(t => (
-                  <button
-                    key={t.topic}
-                    onClick={() => {
-                      setProfile(null)
-                      setQuery(t.topic)
-                      searchPeople(t.topic).then(r => setResults(r.data))
-                    }}
-                    className="text-xs bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 hover:border-teal-400 transition-colors px-2 py-1 rounded-full cursor-pointer"
-                  >
-                    {t.topic} <span className="text-teal-400">({t.count})</span>
-                  </button>
-                ))}
+                {profile.top_topics.map(t => {
+                  const isActive = activeTopic === t.topic
+                  return (
+                    <button
+                      key={t.topic}
+                      onClick={() => setActiveTopic(isActive ? null : t.topic)}
+                      className="text-xs px-2.5 py-1 rounded-full transition-all font-medium"
+                      style={{
+                        background: isActive ? T.teal : T.teal+'12',
+                        color: isActive ? '#fff' : T.teal,
+                        border: `1px solid ${isActive ? T.teal : T.teal+'40'}`,
+                      }}
+                    >
+                      {t.topic}
+                      <span className="ml-1 opacity-70">({t.count})</span>
+                    </button>
+                  )
+                })}
               </div>
+              {activeTopic && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs" style={{color:T.textDim}}>
+                    Filtering contributions by:
+                  </span>
+                  <span className="text-xs font-semibold" style={{color:T.teal}}>{activeTopic}</span>
+                  <button
+                    onClick={() => setActiveTopic(null)}
+                    className="text-xs underline"
+                    style={{color:T.textDim}}>
+                    clear
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Recent docs */}
-          {profile.recent_docs?.length > 0 && (
+          {profile.recent_docs?.length > 0 && (() => {
+            const filtered = activeTopic
+              ? profile.recent_docs.filter(d =>
+                  (d.tags || []).some(tag => tag.toLowerCase() === activeTopic.toLowerCase()) ||
+                  d.title?.toLowerCase().includes(activeTopic.toLowerCase())
+                )
+              : profile.recent_docs
+            return (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Recent Contributions</h3>
+              <h3 className="text-sm font-semibold mb-2" style={{color:T.textSec}}>
+                Recent Contributions
+                {activeTopic && (
+                  <span className="text-xs font-normal ml-1.5" style={{color:T.textDim}}>
+                    — {filtered.length} of {profile.recent_docs.length} match "{activeTopic}"
+                  </span>
+                )}
+              </h3>
               <div className="space-y-2">
-                {profile.recent_docs.map((doc, i) => (
+                {(filtered.length > 0 ? filtered : profile.recent_docs).map((doc, i) => (
                   <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
                     <SourceBadge type={doc.source_type} />
                     {doc.url ? (
