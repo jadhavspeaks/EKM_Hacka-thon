@@ -210,22 +210,74 @@ def probe_sites(session):
         for u in found_sites:
             print(f"    {u}")
 
-    banner("Step 4: Alternative site discovery")
-    for url in [
-        f"{SP_BASE}/_api/web/webs?$select=Title,Url",
-        f"{SP_BASE}/_api/site/rootweb/webs?$select=Title,Url",
-        f"{SP_BASE}/_api/search/query?querytext='*'&rowlimit=3&$select=Title,Path",
-    ]:
+
+    banner("Step 4: Search API - discover actual site paths")
+    # Search API returned 200 - parse it properly to find site URLs
+    search_url = f"{SP_BASE}/_api/search/query?querytext='*'&rowlimit=50&selectproperties='Title,Path,SiteName,WebTemplate'"
+    try:
+        r = session.get(search_url, timeout=TIMEOUT)
+        info(f"Search query: HTTP {r.status_code}")
+        if r.status_code == 200:
+            d = r.json()
+            # Navigate SharePoint search result structure
+            try:
+                rows = (d.get("d",{})
+                         .get("query",{})
+                         .get("PrimaryQueryResult",{})
+                         .get("RelevantResults",{})
+                         .get("Table",{})
+                         .get("Rows",{})
+                         .get("results", []))
+                ok(f"Search returned {len(rows)} rows")
+                site_urls_found = set()
+                for row in rows:
+                    cells = {c["Key"]: c["Value"] for c in row.get("Cells",{}).get("results",[])}
+                    path  = cells.get("Path","")
+                    title = cells.get("Title","")
+                    if path and "/_api" not in path and "/Lists/" not in path:
+                        # Extract site root from path
+                        parts = path.replace(SP_BASE,"").split("/")
+                        if len(parts) >= 3:
+                            site_root = SP_BASE + "/" + parts[1] + "/" + parts[2]
+                        else:
+                            site_root = path
+                        site_urls_found.add(site_root)
+                        info(f"  Path: {path[:80]}  | Title: {title[:40]}")
+
+                if site_urls_found:
+                    print()
+                    ok(f"Unique site roots found via search ({len(site_urls_found)}):")
+                    for u in sorted(site_urls_found):
+                        print(f"    {u}")
+                    print()
+                    ok("Test these URLs - try each in probe Step 3 or update sharepoint_sites.txt")
+            except Exception as e:
+                info(f"Search parse error: {e}")
+                info(f"Raw response snippet: {str(d)[:500]}")
+        else:
+            info(f"Search returned: {r.text[:300]}")
+    except Exception as e:
+        fail(f"Search API error: {e}")
+
+    banner("Step 5: Try search-based site enumeration")
+    # Also try querying for SPSite content class
+    for query in ["contentclass:STS_Site", "contentclass:STS_Web"]:
+        url = f"{SP_BASE}/_api/search/query?querytext='{query}'&rowlimit=20&selectproperties='Title,Path'"
         try:
             r = session.get(url, timeout=TIMEOUT)
-            info(f"HTTP {r.status_code} <- {url.replace(SP_BASE,'')}")
+            info(f"HTTP {r.status_code} <- {query}")
             if r.status_code == 200:
-                d = r.json().get("d", {})
-                webs = d.get("results", [])
-                if webs:
-                    ok(f"Found {len(webs)} sites:")
-                    for w in webs[:15]:
-                        info(f"  -> {w.get('Url','?')}  ({w.get('Title','?')})")
+                rows = (r.json().get("d",{})
+                                .get("query",{})
+                                .get("PrimaryQueryResult",{})
+                                .get("RelevantResults",{})
+                                .get("Table",{})
+                                .get("Rows",{})
+                                .get("results",[]))
+                ok(f"  {query}: {len(rows)} results")
+                for row in rows[:10]:
+                    cells = {c["Key"]: c["Value"] for c in row.get("Cells",{}).get("results",[])}
+                    info(f"    {cells.get('Path','?')}  |  {cells.get('Title','?')}")
         except Exception as e:
             info(f"  Error: {e}")
 
