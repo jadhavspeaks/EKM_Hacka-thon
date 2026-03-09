@@ -5,6 +5,7 @@ import SearchPage from './pages/Search'
 import Documents from './pages/Documents'
 import Intelligence from './pages/Intelligence'
 import LearnPage from './pages/LearnPage'
+import CommunityPage from './pages/CommunityPage'
 
 // -- Theme (inline) -------------------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
@@ -41,6 +42,7 @@ const NAV = [
   { to: '/search',       icon: Search,          label: 'Search'       },
   { to: '/documents',    icon: FileText,        label: 'Documents'    },
   { to: '/intelligence', icon: Lightbulb,       label: 'Intelligence' },
+  { to: '/community',    icon: Users,           label: 'Community'    },
 ]
 
 export default function App() {
@@ -120,6 +122,7 @@ export default function App() {
           <Route path="/documents"    element={<Documents />}    />
           <Route path="/intelligence" element={<Intelligence />} />
           <Route path="/learn"        element={<LearnPage />}    />
+          <Route path="/community"   element={<CommunityPage />} />
         </Routes>
       </main>
     </div>

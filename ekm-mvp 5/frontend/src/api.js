@@ -58,4 +58,13 @@ export const getHandover        = (name) => api.get(`/intelligence/handover/${en
 export const getHandoverProgress   = (name) => api.get(`/intelligence/handover/${encodeURIComponent(name)}/progress`)
 export const saveHandoverProgress  = (name, progress) => api.post(`/intelligence/handover/${encodeURIComponent(name)}/progress`, { progress })
 
+// Community
+export const flagDocument     = (body) => api.post('/community/flag', body)
+export const getFlags         = (docId) => api.get(`/community/flags/${docId}`)
+export const addAnnotation    = (body) => api.post('/community/annotate', body)
+export const getAnnotations   = (docId) => api.get(`/community/annotations/${docId}`)
+export const voteAnnotation   = (body) => api.post('/community/vote', body)
+export const getLeaderboard   = () => api.get('/community/leaderboard')
+export const getDigest        = () => api.get('/community/digest')
+
 export default api

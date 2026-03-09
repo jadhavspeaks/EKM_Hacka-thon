@@ -349,6 +349,10 @@ async def fetch_documents(updated_since: datetime | None = None) -> list[Documen
     if not session:
         return []
 
+    # Ensure updated_since is timezone-aware so comparisons with SP dates never crash
+    if updated_since and updated_since.tzinfo is None:
+        updated_since = updated_since.replace(tzinfo=timezone.utc)
+
     mode = "incremental" if updated_since else "full"
     logger.info(f"SharePoint: {mode} sync — {len(site_urls)} site(s) via NTLM")
 

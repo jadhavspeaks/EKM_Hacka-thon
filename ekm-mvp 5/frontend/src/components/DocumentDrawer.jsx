@@ -9,15 +9,80 @@
  * Pass docId=null to close.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { T } from '../theme'
-import { getDocument } from '../api'
+import { getDocument, flagDocument, getFlags, addAnnotation, getAnnotations, voteAnnotation } from '../api'
 import { SourceBadge, Spinner, TeamsButton } from './UI'
 import {
   X, ExternalLink, Clock, Tag, User, Hash, AlertCircle,
   FileText, GitBranch, GitCommit, ChevronRight, Copy, Check,
-  BookOpen, Layers, Calendar, Activity
+  BookOpen, Layers, Calendar, Activity, Flag, MessageSquare,
+  ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Send, AlertTriangle,
+  Lightbulb, Pencil, Users
 } from 'lucide-react'
+
+// Prism.js for syntax highlighting - loaded from CDN
+let _prismLoaded = false
+function ensurePrism(cb) {
+  if (typeof window === 'undefined') return
+  if (window.Prism) { cb(); return }
+  if (_prismLoaded) { setTimeout(() => cb(), 300); return }
+  _prismLoaded = true
+  const css = document.createElement('link')
+  css.rel = 'stylesheet'
+  css.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css'
+  document.head.appendChild(css)
+  const s = document.createElement('script')
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js'
+  s.onload = () => {
+    const s2 = document.createElement('script')
+    s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js'
+    s2.onload = cb
+    document.head.appendChild(s2)
+  }
+  document.head.appendChild(s)
+}
+
+// Detect language from file path or content
+function detectLang(filePath, content) {
+  if (!filePath && !content) return null
+  const ext = (filePath || '').split('.').pop().toLowerCase()
+  const map = {
+    js:'javascript', jsx:'javascript', ts:'typescript', tsx:'typescript',
+    py:'python', java:'java', go:'go', rb:'ruby', rs:'rust',
+    cs:'csharp', cpp:'cpp', c:'c', sh:'bash', yml:'yaml', yaml:'yaml',
+    json:'json', xml:'xml', html:'html', css:'css', sql:'sql',
+    md:'markdown', tf:'hcl', kt:'kotlin', scala:'scala',
+  }
+  if (map[ext]) return map[ext]
+  if (content) {
+    if (content.includes('def ') && content.includes(':')) return 'python'
+    if (content.includes('func ') && content.includes('package ')) return 'go'
+    if (content.includes('import React') || content.includes('const ')) return 'javascript'
+    if (content.includes('public class') || content.includes('import java')) return 'java'
+  }
+  return null
+}
+
+// Syntax-highlighted code block
+function CodeBlock({ content, filePath }) {
+  const ref = useRef(null)
+  const lang = detectLang(filePath, content)
+  useEffect(() => {
+    if (!ref.current) return
+    ensurePrism(() => {
+      if (window.Prism) window.Prism.highlightElement(ref.current)
+    })
+  }, [content, lang])
+  return (
+    <pre className="rounded-lg overflow-auto max-h-96 text-xs leading-relaxed"
+      style={{ background: '#2d2d2d', padding: '14px', margin: 0, border: 'none' }}>
+      <code ref={ref} className={lang ? `language-${lang}` : ''} style={{ fontFamily: 'JetBrains Mono, Fira Code, monospace', fontSize: '11.5px' }}>
+        {content}
+      </code>
+    </pre>
+  )
+}
 
 // -- Metadata pill -------------------------------------------------------------
 function Pill({ label, value, color }) {
@@ -273,9 +338,7 @@ function GitHubLayout({ doc }) {
           <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-medium">
             {ct === 'commit' ? 'Commit Message' : ct === 'pull_request' ? 'Description' : 'Content'}
           </p>
-          <pre className="text-xs text-slate-700 bg-slate-50 rounded-lg p-3 border border-slate-200 max-h-80 overflow-y-auto font-mono leading-relaxed whitespace-pre-wrap">
-            {doc.content}
-          </pre>
+          <CodeBlock content={doc.content} filePath={m.file_path} />
         </div>
       )}
 
@@ -305,6 +368,173 @@ function GenericLayout({ doc }) {
     </div>
   )
 }
+
+
+// ===============================================================================
+// COMMUNITY PANEL
+// ===============================================================================
+const FLAG_TYPES = [
+  { key: 'outdated',     label: 'Outdated',     color: 'text-amber-600 bg-amber-50 border-amber-200' },
+  { key: 'incorrect',    label: 'Incorrect',    color: 'text-red-600 bg-red-50 border-red-200' },
+  { key: 'useful',       label: 'Mark useful',  color: 'text-green-600 bg-green-50 border-green-200' },
+  { key: 'needs_review', label: 'Needs review', color: 'text-blue-600 bg-blue-50 border-blue-200' },
+]
+
+const ANN_TYPES = [
+  { key: 'note',       label: 'Note',       color: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { key: 'suggestion', label: 'Suggestion', color: 'bg-purple-50 border-purple-200 text-purple-700' },
+  { key: 'correction', label: 'Correction', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+]
+
+function CommunityPanel({ docId }) {
+  const [open, setOpen]               = useState(false)
+  const [tab, setTab]                 = useState('flags')
+  const [flags, setFlags]             = useState([])
+  const [annotations, setAnnotations] = useState([])
+  const [author, setAuthor]           = useState('')
+  const [noteText, setNoteText]       = useState('')
+  const [noteType, setNoteType]       = useState('note')
+  const [submitting, setSubmitting]   = useState(false)
+  const [done, setDone]               = useState('')
+
+  useEffect(() => {
+    if (!open || !docId) return
+    getFlags(docId).then(r => setFlags(r.data.flags || [])).catch(() => {})
+    getAnnotations(docId).then(r => setAnnotations(r.data.annotations || [])).catch(() => {})
+  }, [open, docId])
+
+  const submitFlag = async (flagType) => {
+    setSubmitting(true)
+    try {
+      await flagDocument({ doc_id: docId, flag_type: flagType, author: author || 'anonymous' })
+      setFlags(prev => [...prev, { flag_type: flagType, author: author || 'anonymous', created_at: new Date().toISOString() }])
+      setDone('Flag submitted')
+      setTimeout(() => setDone(''), 2000)
+    } catch(e) { } finally { setSubmitting(false) }
+  }
+
+  const submitNote = async () => {
+    if (!noteText.trim()) return
+    setSubmitting(true)
+    try {
+      const r = await addAnnotation({ doc_id: docId, text: noteText, author: author || 'anonymous', annotation_type: noteType })
+      setAnnotations(prev => [{ id: r.data.id, text: noteText, author: author || 'anonymous', annotation_type: noteType, votes: 0, created_at: new Date().toISOString() }, ...prev])
+      setNoteText('')
+      setDone('Note added')
+      setTimeout(() => setDone(''), 2000)
+    } catch(e) { } finally { setSubmitting(false) }
+  }
+
+  const vote = async (id, dir) => {
+    await voteAnnotation({ annotation_id: id, direction: dir }).catch(() => {})
+    setAnnotations(prev => prev.map(a => a.id === id ? { ...a, votes: a.votes + (dir === 'up' ? 1 : -1) } : a))
+  }
+
+  const flagCounts = flags.reduce((acc, f) => { acc[f.flag_type] = (acc[f.flag_type] || 0) + 1; return acc }, {})
+  const total = flags.length + annotations.length
+
+  return (
+    <div className="border-t border-slate-100">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 bg-slate-50 hover:bg-slate-100 transition-colors">
+        <span className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          <Users size={12} className="text-teal-500"/>
+          Community
+          {total > 0 && <span className="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full text-xs font-semibold">{total}</span>}
+        </span>
+        {open ? <ChevronUp size={13} className="text-slate-400"/> : <ChevronDown size={13} className="text-slate-400"/>}
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 bg-white">
+          <div className="mt-3 mb-3">
+            <input value={author} onChange={e => setAuthor(e.target.value)}
+              placeholder="Your name (optional)"
+              className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400 bg-slate-50"/>
+          </div>
+          <div className="flex gap-1 mb-3">
+            {[['flags','Flags'],['notes','Notes']].map(([k,l]) => (
+              <button key={k} onClick={() => setTab(k)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab===k ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                {l} {k==='flags' && flags.length > 0 ? `(${flags.length})` : k==='notes' && annotations.length > 0 ? `(${annotations.length})` : ''}
+              </button>
+            ))}
+          </div>
+          {done && <div className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3">{done}</div>}
+
+          {tab === 'flags' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                {FLAG_TYPES.map(ft => (
+                  <button key={ft.key} onClick={() => submitFlag(ft.key)} disabled={submitting}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-all hover:shadow-sm disabled:opacity-50 ${ft.color}`}>
+                    <span>{ft.label}</span>
+                    {flagCounts[ft.key] > 0 && <span className="font-bold">{flagCounts[ft.key]}</span>}
+                  </button>
+                ))}
+              </div>
+              {flags.slice(0,5).map((f,i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-slate-500 py-1 border-b border-slate-50">
+                  <span className="font-medium capitalize">{f.flag_type.replace('_',' ')}</span>
+                  <span className="text-slate-300">·</span>
+                  <span>{f.author}</span>
+                  <span className="ml-auto text-slate-300">{new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === 'notes' && (
+            <div className="space-y-3">
+              <div className="flex gap-1">
+                {ANN_TYPES.map(at => (
+                  <button key={at.key} onClick={() => setNoteType(at.key)}
+                    className={`px-2.5 py-1 rounded-md text-xs border font-medium transition-all ${noteType===at.key ? at.color : 'bg-white border-slate-200 text-slate-400'}`}>
+                    {at.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <textarea value={noteText} onChange={e => setNoteText(e.target.value)}
+                  placeholder="Add a note, suggestion or correction visible to everyone..."
+                  rows={3}
+                  className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400 resize-none bg-slate-50"/>
+                <button onClick={submitNote} disabled={submitting || !noteText.trim()}
+                  className="self-end p-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 transition-colors">
+                  <Send size={12}/>
+                </button>
+              </div>
+              {annotations.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-2">No notes yet. Be the first.</p>
+              )}
+              {annotations.map(a => (
+                <div key={a.id} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${(ANN_TYPES.find(t => t.key===a.annotation_type)||ANN_TYPES[0]).color}`}>
+                      {(ANN_TYPES.find(t => t.key===a.annotation_type)||ANN_TYPES[0]).label}
+                    </span>
+                    <span className="text-xs font-medium text-slate-600">{a.author}</span>
+                    <span className="ml-auto text-xs text-slate-300">{new Date(a.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed mb-2">{a.text}</p>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => vote(a.id,'up')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-green-600 transition-colors">
+                      <ThumbsUp size={10}/> {a.votes > 0 ? a.votes : ''}
+                    </button>
+                    <button onClick={() => vote(a.id,'down')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors">
+                      <ThumbsDown size={10}/>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 // ===============================================================================
 // MAIN DRAWER
@@ -481,6 +711,10 @@ export default function DocumentDrawer({ docId, onClose }) {
             </div>
           )}
         </div>
+
+
+        {/* Community panel */}
+        {doc && !loading && <CommunityPanel docId={doc.id} />}
 
         {/* ── Footer ── */}
         {doc && (

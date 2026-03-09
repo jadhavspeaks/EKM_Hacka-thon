@@ -10,6 +10,7 @@ from routes.explain import router as explain_router
 from routes.people import router as people_router
 from routes.analytics import router as analytics_router
 from routes.intelligence import router as intelligence_router
+from routes.community import router as community_router
 from utils.sync_service import run_sync
 from config import get_settings
 import logging
@@ -63,6 +64,7 @@ app.include_router(documents_router)
 app.include_router(explain_router)
 app.include_router(people_router)
 app.include_router(analytics_router)
+app.include_router(community_router)
 app.include_router(intelligence_router)
 
 
