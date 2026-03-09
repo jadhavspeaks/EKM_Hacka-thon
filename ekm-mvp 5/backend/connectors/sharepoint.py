@@ -44,6 +44,12 @@ REQUEST_TIMEOUT    = 60
 MAX_PAGES_PER_SITE = 300
 MAX_FILES_PER_LIB  = 500
 
+# Internal SharePoint host discovered from codebase (no Azure AD needed)
+# NTLM domain is "nam" — use NAM\\username format
+INTERNAL_SP_HOST   = "share.nam.nsroot.net"
+INTERNAL_SP_PORT   = 443
+INTERNAL_SP_DOMAIN = "nam"
+
 
 # ── Site list ─────────────────────────────────────────────────────────────────
 
@@ -84,19 +90,30 @@ def _make_session() -> requests.Session | None:
     except ImportError:
         logger.error(
             "SharePoint: requests-ntlm not installed.\n"
-            "  Run: pip install requests-ntlm"
+            "  Run: pip install requests-ntlm --break-system-packages"
         )
         return None
 
+    # Internal SharePoint uses NAM domain NTLM.
+    # Normalise username to NAM\username format.
+    # Accept: nj38296@citi.com, NAM\nj38296, or plain nj38296
+    if "@" in username:
+        short = username.split("@")[0]
+        ntlm_user = f"{INTERNAL_SP_DOMAIN}\\{short}"
+    elif "\\" not in username:
+        ntlm_user = f"{INTERNAL_SP_DOMAIN}\\{username}"
+    else:
+        ntlm_user = username  # already DOMAIN\user
+
+    logger.info(f"SharePoint: NTLM session as '{ntlm_user}' -> {INTERNAL_SP_HOST}")
+
     session         = requests.Session()
-    session.auth    = HttpNtlmAuth(username, password)
-    session.verify  = False   # corporate SSL cert
+    session.auth    = HttpNtlmAuth(ntlm_user, password)
+    session.verify  = False   # corporate SSL cert — self-signed internally
     session.headers.update({
         "Accept":       "application/json;odata=verbose",
         "Content-Type": "application/json;odata=verbose",
     })
-
-    logger.info(f"SharePoint: NTLM session created for '{username}'")
     return session
 
 

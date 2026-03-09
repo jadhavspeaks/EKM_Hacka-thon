@@ -1,11 +1,21 @@
 # SharePoint Sites — EKM Knowledge Crawler
-# ─────────────────────────────────────────
+# -----------------------------------------
 # One URL per line. Lines starting with # are ignored.
 #
-# SITE TYPES:
-#   /sites/  → Wiki mode   — crawls Site Pages (wiki articles) + Document Libraries
-#   /teams/  → Docs mode   — crawls Document Libraries only (no wiki pages)
+# INTERNAL HOST: share.nam.nsroot.net (port 443, NTLM domain: nam)
+# This is the internal SharePoint server - no Azure AD / ADFS needed.
+# Auth: NAM\username + Windows password via requests_ntlm
 #
-# ── Your sites ───────────────────────────────────────────────────────────────
-https://citi.sharepoint.com/sites/cc-ee        # Wiki content
-https://citi.sharepoint.com/teams/AutoCon      # Team documents
+# SITE TYPES:
+#   /sites/  -> Wiki mode  - crawls Site Pages + Document Libraries
+#   /teams/  -> Docs mode  - crawls Document Libraries only
+#
+# FORMAT: https://share.nam.nsroot.net/sites/<sitename>
+#
+# -- Your sites (UPDATE these with actual internal site paths) ----------------
+https://share.nam.nsroot.net/sites/cc-ee        # Wiki content (was citi.sharepoint.com/sites/cc-ee)
+https://share.nam.nsroot.net/teams/AutoCon      # Team documents (was citi.sharepoint.com/teams/AutoCon)
+#
+# NOTE: The site path (/sites/cc-ee, /teams/AutoCon) may differ on
+# the internal host. Check your browser URL when on the internal network.
+# Example: https://share.nam.nsroot.net/sites/<actual-path>
