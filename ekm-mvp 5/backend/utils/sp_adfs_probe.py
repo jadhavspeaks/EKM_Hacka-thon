@@ -149,64 +149,85 @@ def probe_auth(usr, pwd):
     return None
 
 
+
+SITE_PATH_PATTERNS = [
+    "/sites/{name}", "/teams/{name}",
+    "/sites/{name_lower}", "/teams/{name_lower}",
+    "/sites/{name_upper}", "/teams/{name_upper}",
+    "/{name}", "/sites/EE", "/sites/cc",
+]
+
+def _test_site_url(session, url):
+    for path in ["/_api/web/Title", "/_api/web?$select=Title"]:
+        try:
+            r = session.get(url + path, timeout=TIMEOUT)
+            if r.status_code == 200:
+                d = r.json().get("d", {})
+                title = d.get("value") or d.get("Title") or url.split("/")[-1]
+                r2 = session.get(
+                    url + "/_api/web/lists?$filter=BaseTemplate eq 101"
+                    " and Hidden eq false&$select=Title", timeout=TIMEOUT)
+                libs = []
+                if r2.status_code == 200:
+                    libs = [l.get("Title","?") for l in r2.json().get("d",{}).get("results",[])]
+                return title, libs
+        except Exception:
+            pass
+    return None
+
+
 def probe_sites(session):
-    banner("Step 3: Site-by-site REST API test")
-    for site_url in SITES:
-        info(f"\nTesting: {site_url}")
-        endpoints = [
-            ("/_api/web/Title",       lambda d: f"title='{d.get('d',{}).get('value','?')}'"),
-            ("/_api/web?$select=Title", lambda d: f"title='{d.get('d',{}).get('Title','?')}'"),
-            ("/_api/web",             lambda d: f"title='{d.get('d',{}).get('Title','?')}'"),
-        ]
-        connected = False
-        for path, extract in endpoints:
-            url = site_url + path
-            try:
-                r = session.get(url, timeout=TIMEOUT)
-                if r.status_code == 200:
-                    try:
-                        result = extract(r.json())
-                        ok(f"Connected: {result}  [{path}]")
-                    except Exception:
-                        ok(f"Connected: HTTP 200  [{path}]")
-                    connected = True
+    banner("Step 3: Site path discovery")
+    site_names = ["cc-ee", "AutoCon", "autocon", "auto-con", "ee", "cc", "CCEE", "autocon2"]
+    info("Probing path variations (~30 seconds)...")
+    found_sites = []
 
-                    # List document libraries
-                    libs_url = site_url + "/_api/web/lists?$filter=BaseTemplate eq 101 and Hidden eq false&$select=Title"
-                    r2 = session.get(libs_url, timeout=TIMEOUT)
-                    if r2.status_code == 200:
-                        libs = r2.json().get("d",{}).get("results",[])
-                        ok(f"Document libraries ({len(libs)}):")
-                        for lib in libs[:8]:
-                            info(f"   -> {lib.get('Title','?')}")
-                    break
-                else:
-                    info(f"  HTTP {r.status_code} <- {path}")
-            except Exception as e:
-                info(f"  Error: {e} <- {path}")
+    for name in site_names:
+        for pattern in SITE_PATH_PATTERNS:
+            path = pattern.format(
+                name=name,
+                name_lower=name.lower(),
+                name_upper=name.upper()
+            )
+            url = SP_BASE + path
+            result = _test_site_url(session, url)
+            if result:
+                title, libs = result
+                ok(f"FOUND: {url}")
+                ok(f"  Title: {title}")
+                if libs:
+                    ok(f"  Libraries: {', '.join(libs[:6])}")
+                found_sites.append(url)
+                break
 
-        if not connected:
-            fail(f"Could not connect to {site_url}")
-            info("The site path may differ on the internal host.")
-            info("Check your browser URL when accessing this site on VPN.")
+    if not found_sites:
+        fail("No sites found with common path patterns.")
+        info("Open the site in your browser on VPN, copy the URL,")
+        info("and paste it into sharepoint_sites.txt")
+    else:
+        print()
+        ok(f"Found {len(found_sites)} site(s). Update sharepoint_sites.txt:")
+        for u in found_sites:
+            print(f"    {u}")
 
-    # Try to list all top-level sites
-    banner("Step 4: Discover available sites on this host")
-    try:
-        r = session.get(f"{SP_BASE}/_api/web/webs?$select=Title,Url", timeout=TIMEOUT)
-        if r.status_code == 200:
-            webs = r.json().get("d",{}).get("results",[])
-            if webs:
-                ok(f"Found {len(webs)} sub-sites:")
-                for w in webs[:20]:
-                    info(f"  -> {w.get('Url','?')}  ({w.get('Title','?')})")
-            else:
-                info("No sub-sites listed (may need site collection admin)")
-        else:
-            info(f"Site listing: HTTP {r.status_code}")
-    except Exception as e:
-        info(f"Site listing error: {e}")
-
+    banner("Step 4: Alternative site discovery")
+    for url in [
+        f"{SP_BASE}/_api/web/webs?$select=Title,Url",
+        f"{SP_BASE}/_api/site/rootweb/webs?$select=Title,Url",
+        f"{SP_BASE}/_api/search/query?querytext='*'&rowlimit=3&$select=Title,Path",
+    ]:
+        try:
+            r = session.get(url, timeout=TIMEOUT)
+            info(f"HTTP {r.status_code} <- {url.replace(SP_BASE,'')}")
+            if r.status_code == 200:
+                d = r.json().get("d", {})
+                webs = d.get("results", [])
+                if webs:
+                    ok(f"Found {len(webs)} sites:")
+                    for w in webs[:15]:
+                        info(f"  -> {w.get('Url','?')}  ({w.get('Title','?')})")
+        except Exception as e:
+            info(f"  Error: {e}")
 
 if __name__ == "__main__":
     print("\n" + "="*65)
