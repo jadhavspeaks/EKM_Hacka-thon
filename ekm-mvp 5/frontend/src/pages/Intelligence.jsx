@@ -877,13 +877,12 @@ function PeopleTab({ teamsDomain }) {
 
 // ── Onboarding Tab ────────────────────────────────────────────────────────────
 function OnboardingTab() {
-  const _preload = window.location.search ? new URLSearchParams(window.location.search).get('onboard') || '' : ''
-  const [topic, setTopic]     = useState(_preload)
+  const [topic, setTopic]     = useState('')
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
 
   const load = async (t) => {
-    if (!t?.trim()) return
+    if (!t || !t.trim()) return
     setLoading(true)
     try {
       const r = await getOnboardingPath(t)
@@ -895,7 +894,12 @@ function OnboardingTab() {
 
   // Auto-submit if topic came from URL ?onboard=
   useEffect(() => {
-    if (_preload) load(_preload)
+    var params = new URLSearchParams(window.location.search)
+    var pre = params.get('onboard') || ''
+    if (pre) {
+      setTopic(pre)
+      load(pre)
+    }
   }, [])
 
   const handleSearch = async (e) => {
