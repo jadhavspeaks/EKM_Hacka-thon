@@ -4,13 +4,13 @@
 <img src="https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
 <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
 <img src="https://img.shields.io/badge/MongoDB-7.0-47A248?style=for-the-badge&logo=mongodb&logoColor=white"/>
-<img src="https://img.shields.io/badge/Status-MVP_v3.1-0D9488?style=for-the-badge"/>
+<img src="https://img.shields.io/badge/Status-MVP_v3.8-0D9488?style=for-the-badge"/>
 
 # 🧠 Enterprise Knowledge Management (EKM)
 
 **One Search. Every Source. Zero Silos.**
 
-EKM unifies **SharePoint**, **Confluence**, **Jira**, and **GitHub Enterprise** into a single MongoDB-backed search engine — with BM25 relevance ranking, SME identification, entity extraction, code intelligence, and a full intelligence layer covering risk, velocity, gaps, handovers and learning paths.
+EKM unifies **SharePoint**, **Confluence**, **Jira**, and **GitHub Enterprise** into a single MongoDB-backed search engine — with BM25 relevance ranking, SME identification, entity extraction, code intelligence, a full 10-tab intelligence layer, syntax-highlighted code viewing, and a native community contribution system with flags, annotations, leaderboard, and weekly digest.
 
 [Features](#-features) · [Intelligence Layer](#-intelligence-layer) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Configuration](#-configuration) · [API Reference](#-api-reference) · [Changelog](#-changelog) · [Roadmap](#-roadmap)
 
@@ -58,6 +58,19 @@ Knowledge lives in silos. Engineers work in Jira. Processes live in Confluence. 
 
 ---
 
+## 🌟 What's New in v3.8
+
+| Feature | Details |
+|---------|---------|
+| 🚩 **Document Flags** | Mark any doc as Outdated / Incorrect / Useful / Needs Review — one click, stored per document |
+| 📝 **Community Notes** | Add Notes, Suggestions or Corrections visible to all users — with upvote/downvote voting |
+| 🏆 **Leaderboard** | Knowledge Contribution Score: doc contributions ×3, notes ×5, flags ×2 |
+| 📬 **Weekly Digest** | Trending topics, source breakdown, top contributors, activity feed |
+| 🎨 **Syntax Highlighting** | Prism.js in DocumentDrawer — 20+ languages auto-detected |
+| 🌐 **SharePoint Live** | `share.nam.nsroot.net` connected — 500+ pages + 3 libraries indexed |
+
+---
+
 ## 🧠 Intelligence Layer
 
 10 tabs built entirely on existing indexed data, accessible via left sidebar:
@@ -90,6 +103,27 @@ Dashboard shortcuts cards navigate directly to the correct Intelligence tab usin
 | At-Risk Experts | Distinct `[NE]`-named authors (vendor concentration) |
 
 Other panels: Source Composition segmented bar · 7-day Search Volume bar chart · Top Queries list · Docs by Source horizontal bars · 6 Intelligence shortcut cards.
+
+---
+
+## 👥 Community Layer
+
+Native contribution system built into EKM — no external Q&A platform needed.
+
+### Per-Document Panel (in DocumentDrawer)
+Every document has a collapsible **Community** section at the bottom:
+- **Flags tab** — Outdated / Incorrect / Mark Useful / Needs Review — counts shown per type
+- **Notes tab** — Note / Suggestion / Correction with optional author name + upvote/downvote voting
+- Anonymous contributions supported
+
+### Community Page (sidebar nav item)
+**Weekly Digest** — new docs, updated docs, trending topics by tag, source breakdown bars, top contributors this week, live activity feed
+
+**Leaderboard** — Knowledge Contribution Score per person; filter by Overall / Docs / Notes / Flags; progress bars + medals
+
+### MongoDB Collections
+- `community_flags` — document flags with type, author, timestamp
+- `community_annotations` — notes with type, text, votes, author, timestamp
 
 ---
 
@@ -139,10 +173,11 @@ Used in: `sme_ranker.py`, `intelligence.py` (`_classify()`), `api.py` (dashboard
 
 | Source | Auth | Content | Status |
 |--------|------|---------|--------|
-| **Jira** (on-premise) | PAT token | Issues, comments, ADF bodies, metadata | ✅ 4,979+ docs |
-| **Confluence** (on-premise) | PAT token | Pages, spaces, HTML → plain text | ✅ 88+ docs |
-| **SharePoint Online** | NTLM (IIS) | SitePages, document libraries | 🔧 Credentials pending |
-| **GitHub Enterprise** | PAT token | Commits, code files, pull requests | ✅ 90 docs |
+| **Jira** (on-premise) | PAT token | Issues, comments, ADF bodies, metadata | ✅ 3,906+ docs |
+| **Confluence** (on-premise) | PAT token | Pages, spaces, HTML → plain text | ✅ 769+ docs |
+| **SharePoint** (`share.nam.nsroot.net`) | NTLM `nam\\username` | Site pages, document libraries | ✅ 500+ pages live |
+| **SharePoint Online** (`citi.sharepoint.com`) | ADFS WS-Fed | O365 sites | 🔧 Auth path identified |
+| **GitHub Enterprise** | PAT token | Commits, code files, pull requests | ✅ 417 docs |
 
 ### Source Boosts (BM25 re-ranking)
 ```python
@@ -202,7 +237,8 @@ ekm-mvp/
 │   │   ├── analytics.py                 ← Search logs, volume, gaps
 │   │   ├── intelligence.py              ← All 10 intelligence endpoints
 │   │   ├── people.py                    ← Contributor profiles
-│   │   └── explain.py                   ← Code intelligence
+│   │   ├── explain.py                   ← Code intelligence
+│   │   └── community.py                 ← NEW: flags, annotations, leaderboard, digest
 │   └── utils/
 │       ├── sync_service.py              ← Orchestrates connector runs
 │       ├── bm25.py                      ← BM25 re-ranker + source boost
@@ -336,6 +372,17 @@ TEAMS_DOMAIN=citi.com
 | `GET` | `/api/people/search?q={name}` | Search contributors |
 | `GET` | `/api/people/{name}` | Full contribution profile |
 
+### Community
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/community/flag` | Flag a document (outdated/incorrect/useful/needs_review) |
+| `GET`  | `/api/community/flags/{doc_id}` | Get flags for a document |
+| `POST` | `/api/community/annotate` | Add note / suggestion / correction |
+| `GET`  | `/api/community/annotations/{doc_id}` | Get annotations for a document |
+| `POST` | `/api/community/vote` | Vote on an annotation |
+| `GET`  | `/api/community/leaderboard` | Ranked contributor list |
+| `GET`  | `/api/community/digest` | Weekly activity digest |
+
 ### Other
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -373,6 +420,17 @@ If both are 0 — documents have no date fields, run a Force Full sync.
 ---
 
 ## 📈 Changelog
+
+### v3.8 (March 2026) — Community Layer
+**Native community contribution — syntax highlighting — SharePoint live**
+
+- **Community panel** on every document (DocumentDrawer): Flags tab (Outdated/Incorrect/Useful/Needs Review) + Notes tab (Note/Suggestion/Correction with upvote/downvote voting)
+- **Community page** — new sidebar nav item: Weekly Digest (trending topics, source breakdown, top contributors, activity feed) + Leaderboard (contribution score: docs×3, notes×5, flags×2; medals for top 3)
+- **Syntax highlighting** — Prism.js CDN; 20+ languages auto-detected from file extension; dark theme code blocks
+- **Community API** — 7 new endpoints: `/api/community/flag`, `/annotate`, `/vote`, `/flags/{id}`, `/annotations/{id}`, `/leaderboard`, `/digest`
+- **SharePoint live** — `share.nam.nsroot.net` NTLM connected; 500+ pages + 3 libraries indexed; `sp_adfs_probe.py` auto-discovers site paths via Search API and writes to `sharepoint_sites.txt`
+- **Timezone bug fixed** — naive/aware datetime comparison crash in incremental sync
+- **Double-slash URL fix** — `//citi.net` 404 caused by empty path segment; fixed with `re.sub`
 
 ### v3.7 (March 2026)
 **Non-blocking sync + live progress + smart caching**
@@ -495,31 +553,32 @@ If both are 0 — documents have no date fields, run a Force Full sync.
 - [x] Correct Vendor/Internal classification ([TECH NE] = Vendor)
 - [x] Rich Analytics with DoW / hourly / recent feed
 - [x] Person-intent search with profile banner
-- [x] Velocity debug endpoint
+- [x] SharePoint NTLM — 500+ pages live (share.nam.nsroot.net)
+- [x] Syntax highlighting in document viewer (Prism.js)
+- [x] **Community Layer** — flags, annotations, voting, leaderboard, weekly digest
 
-### Phase 2 — Workflow & Alerts
+### Phase 2 — AI Answers (Highest Priority)
+- [ ] **RAG-based Q&A** — Claude API answers with source citations
+- [ ] AI auto-draft for knowledge gaps
+- [ ] Smart weekly digest (AI-generated summary)
+- [ ] AI expert matcher for unanswered community questions
+
+### Phase 3 — Workflow & Alerts
 - [ ] Saved searches + email alerts
-- [ ] Weekly knowledge digest email
 - [ ] Jira webhook → auto-doc-check
 - [ ] Export analytics to PDF / CSV
+- [ ] SharePoint Online (O365) via ADFS WS-Federation
 
-### Phase 3 — Enterprise Security
+### Phase 4 — Enterprise Security
 - [ ] SSO (Azure AD / Okta)
-- [ ] SharePoint credentials (.env) — NTLM connector already built
 - [ ] Role-based access control
 - [ ] Audit log (GDPR)
 
-### Phase 4 — Additional Sources
-- [ ] ServiceNow, Slack, Google Drive
-
-### Phase 5 — AI Layer
-- [ ] RAG-based Q&A (Claude API)
-- [ ] Knowledge graph visualisation
-- [ ] Duplicate detection + merge suggestions
-- [ ] Auto-generated documentation stubs for gaps
+### Phase 5 — Additional Sources
+- [ ] ServiceNow, Slack, Google Drive, Apache Answer connector
 
 ---
 
 <div align="center">
-Built as an enterprise MVP · Python + FastAPI + React + MongoDB · v3.1 · March 2026
+Built as an enterprise MVP · Python + FastAPI + React + MongoDB · v3.8 · March 2026
 </div>

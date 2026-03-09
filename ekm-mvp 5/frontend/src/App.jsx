@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Search, FileText, Lightbulb } from 'lucide-react'
+import { LayoutDashboard, Search, FileText, Lightbulb, Users } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import SearchPage from './pages/Search'
 import Documents from './pages/Documents'
