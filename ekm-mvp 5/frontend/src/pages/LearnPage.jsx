@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 // ── Theme (inline, same as app) ──────────────────────────────────────────────
-const _tid = (() => { try { return localStorage.getItem('ekm-theme') || 'arctic' } catch { return 'arctic' } })()
+const _tid = (() => { try { return localStorage.getItem('ekm-theme') || 'arctic' } catch(e) { return 'arctic' } })()
 const T = _tid === 'slate' ? {
   bg: '#f4f6f8', bgCard: '#ffffff', bgMid: '#f0f4f8', bgDeep: '#1e2a3a',
   border: '#dde3eb', borderLt: '#e4eaf2',
@@ -259,7 +259,7 @@ export default function LearnPage() {
     try {
       const raw = new URLSearchParams(window.location.search).get('topics') || ''
       return raw ? raw.split(',').map(t => decodeURIComponent(t.trim())).filter(Boolean) : []
-    } catch { return [] }
+    } catch(e) { return [] }
   }
 
   const [topics, setTopics]   = useState(_initTopics)
@@ -278,7 +278,7 @@ export default function LearnPage() {
       try {
         const r = await getOnboardingPath(t)
         setResults(prev => ({ ...prev, [t]: r.data }))
-      } catch {
+      } catch(e) {
         setResults(prev => ({ ...prev, [t]: { sections: [], total: 0, error: true } }))
       }
     }))

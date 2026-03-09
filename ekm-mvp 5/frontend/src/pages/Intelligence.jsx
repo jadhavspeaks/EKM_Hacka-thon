@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { getDashboard, getAnalyticsStats, getHealthReport, getRiskReport, getOnboardingPath, getKnowledgeGaps, getExpertsAtRisk, getCoverageReport, getVelocity, getHandover, getHandoverProgress, saveHandoverProgress, searchPeople, getPersonProfile, getConfig } from '../api'
 import { Spinner, SourceBadge } from '../components/UI'
 // ── Theme (inline) ───────────────────────────────────────────────────────
-const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch { return 'arctic' } })()
+const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch(e) { return 'arctic' } })()
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
   border:'#dde3eb', borderLt:'#e4eaf2',
@@ -877,7 +877,7 @@ function PeopleTab({ teamsDomain }) {
 
 // ── Onboarding Tab ────────────────────────────────────────────────────────────
 function OnboardingTab() {
-  const _preload = (() => { try { return new URLSearchParams(window.location.search).get('onboard') || '' } catch { return '' } })()
+  const _preload = (() => { try { return new URLSearchParams(window.location.search).get('onboard') || '' } catch(e) { return '' } })()
   const [topic, setTopic]     = useState(_preload)
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
@@ -1650,7 +1650,7 @@ export default function Intelligence() {
     try {
       const p = new URLSearchParams(window.location.search)
       if (p.get('onboard')) return 'onboarding'
-    } catch {}
+    } catch(e) {}
     return location.state?.tab || 'analytics'
   }
   const [tab, setTab]                 = useState(_initTab)
@@ -1661,7 +1661,7 @@ export default function Intelligence() {
     try {
       const p = new URLSearchParams(window.location.search)
       if (p.get('onboard')) { setTab('onboarding'); return }
-    } catch {}
+    } catch(e) {}
     if (location.state?.tab) setTab(location.state.tab)
   }, [location.search, location.state?.tab])
 

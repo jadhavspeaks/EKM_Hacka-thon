@@ -7,7 +7,7 @@ import Intelligence from './pages/Intelligence'
 import LearnPage from './pages/LearnPage'
 
 // ── Theme (inline) ───────────────────────────────────────────────────────
-const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch { return 'arctic' } })()
+const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch(e) { return 'arctic' } })()
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
   border:'#dde3eb', borderLt:'#e4eaf2',
@@ -30,7 +30,7 @@ const T = _tid === 'slate' ? {
   font:"'IBM Plex Sans',sans-serif", mono:"'IBM Plex Mono',monospace",
 }
 function toggleTheme() {
-  try { localStorage.setItem('ekm-theme', _tid==='slate'?'arctic':'slate') } catch {}
+  try { localStorage.setItem('ekm-theme', _tid==='slate'?'arctic':'slate') } catch(e) {}
   window.location.reload()
 }
 // ─────────────────────────────────────────────────────────────────────────────

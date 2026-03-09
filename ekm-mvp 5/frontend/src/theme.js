@@ -1,7 +1,7 @@
 // EKM Theme — Arctic (default) + Slate
 // Read once at module load. Toggle reloads the page.
 
-const _id = (() => { try { return localStorage.getItem('ekm-theme') || 'arctic' } catch { return 'arctic' } })()
+const _id = (() => { try { return localStorage.getItem('ekm-theme') || 'arctic' } catch(e) { return 'arctic' } })()
 
 const ARCTIC = {
   id:'arctic',
@@ -34,6 +34,6 @@ const SLATE = {
 export const T = _id === 'slate' ? SLATE : ARCTIC
 
 export function toggleTheme() {
-  try { localStorage.setItem('ekm-theme', _id === 'slate' ? 'arctic' : 'slate') } catch {}
+  try { localStorage.setItem('ekm-theme', _id === 'slate' ? 'arctic' : 'slate') } catch(e) {}
   window.location.reload()
 }
