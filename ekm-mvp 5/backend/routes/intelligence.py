@@ -759,7 +759,6 @@ async def debug_velocity():
     Diagnostic: inspect what date formats exist in the documents collection.
     Helps diagnose why velocity returns zeros.
     """
-    from dateutil.relativedelta import relativedelta
     db  = get_db()
     now = datetime.now(timezone.utc)
 
@@ -788,7 +787,7 @@ async def debug_velocity():
     with_str   = await db.documents.count_documents({"updated_at": {"$type": "string"}})
 
     # How many in last 12 months (BSON only)
-    since = now - relativedelta(months=12)
+    since = now - timedelta(days=365)
     bson_recent = await db.documents.count_documents({"updated_at": {"$gte": since}})
 
     return {
@@ -809,21 +808,36 @@ async def get_velocity(topic: str = Query(None)):
     Handles both BSON Date and ISO string date formats.
     Falls back to showing all available data if nothing in 12-month window.
     """
-    from dateutil.relativedelta import relativedelta
     db  = get_db()
     now = datetime.now(timezone.utc)
+
+    def _months_ago(dt: datetime, months: int) -> datetime:
+        """Subtract N months from a datetime without dateutil."""
+        month = dt.month - months
+        year  = dt.year + month // 12
+        month = month % 12
+        if month == 0:
+            month = 12
+            year -= 1
+        import calendar
+        day = min(dt.day, calendar.monthrange(year, month)[1])
+        return dt.replace(year=year, month=month, day=day)
+
+    def _add_months(dt: datetime, months: int) -> datetime:
+        """Add N months to a datetime without dateutil."""
+        return _months_ago(dt, -months)
 
     # Build 12 labelled monthly buckets
     def make_buckets():
         b = {}
         for i in range(11, -1, -1):
-            dt    = now - relativedelta(months=i)
+            dt    = _months_ago(now, i)
             label = dt.strftime("%b %Y")
             b[label] = {"confluence": 0, "jira": 0, "github": 0, "sharepoint": 0, "label": label}
         return b
 
     buckets = make_buckets()
-    since   = now - relativedelta(months=12)
+    since   = _months_ago(now, 12)
 
     # ── Step 1: Try BSON date query first ────────────────────────────────────
     bson_filt: dict = {"updated_at": {"$gte": since}}
@@ -900,7 +914,7 @@ async def get_velocity(topic: str = Query(None)):
         while cursor_dt <= now:
             label = cursor_dt.strftime("%b %Y")
             expanded[label] = {"confluence":0,"jira":0,"github":0,"sharepoint":0,"label":label}
-            cursor_dt = cursor_dt + relativedelta(months=1)
+            cursor_dt = _add_months(cursor_dt, 1)
         # Repopulate
         for doc in all_docs:
             raw = doc.get("updated_at") or doc.get("ingested_at")
