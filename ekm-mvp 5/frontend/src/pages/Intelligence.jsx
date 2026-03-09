@@ -883,22 +883,30 @@ function PeopleTab({ teamsDomain }) {
 
 // ── Onboarding Tab ────────────────────────────────────────────────────────────
 function OnboardingTab() {
-  const [topic, setTopic]     = useState(() => {
-    try { return new URLSearchParams(window.location.search).get('onboard') || '' } catch { return '' }
-  })
+  const _preload = (() => { try { return new URLSearchParams(window.location.search).get('onboard') || '' } catch { return '' } })()
+  const [topic, setTopic]     = useState(_preload)
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
-    if (!topic.trim()) return
+  const load = async (t) => {
+    if (!t?.trim()) return
     setLoading(true)
     try {
-      const r = await getOnboardingPath(topic)
+      const r = await getOnboardingPath(t)
       setData(r.data)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Auto-submit if topic came from URL ?onboard=
+  useEffect(() => {
+    if (_preload) load(_preload)
+  }, [])
+
+  const handleSearch = async (e) => {
+    e.preventDefault()
+    await load(topic)
   }
 
   const SECTION_BG = {
@@ -924,12 +932,23 @@ function OnboardingTab() {
           className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-teal-400"
         />
         <button type="submit" className="btn-primary text-sm px-4">Generate Path</button>
+        <a href="/learn" target="_blank"
+          className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition-all"
+          style={{
+            background: 'transparent',
+            color: T.teal,
+            border: `1px solid ${T.teal}40`,
+            textDecoration: 'none',
+          }}
+          title="Open standalone multi-topic builder">
+          ✦ Multi-topic
+        </a>
         {data?.total > 0 && (
           <button type="button"
-            onClick={() => { const url = `${window.location.origin}/intelligence?onboard=${encodeURIComponent(topic)}`; navigator.clipboard.writeText(url).then(()=>alert('Link copied! Share with new joiners.')).catch(()=>{ prompt('Copy this link:', url) }) }}
+            onClick={() => { const url = `${window.location.origin}/learn?topics=${encodeURIComponent(topic)}`; navigator.clipboard.writeText(url).then(()=>alert('✓ Link copied! Share with new joiners — they can add more topics too.')).catch(()=>{ prompt('Copy this link:', url) }) }}
             className="text-sm bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 px-3 rounded-lg transition-colors"
-            title="Copy shareable new joiner link">
-            🔗 Share
+            title="Open full learning path builder">
+            🔗 Open Full Builder
           </button>
         )}
       </form>
@@ -1633,13 +1652,24 @@ const TAB_META = {
 
 export default function Intelligence() {
   const location = useLocation()
-  const [tab, setTab]                 = useState(location.state?.tab || 'analytics')
+  const _initTab = () => {
+    try {
+      const p = new URLSearchParams(window.location.search)
+      if (p.get('onboard')) return 'onboarding'
+    } catch {}
+    return location.state?.tab || 'analytics'
+  }
+  const [tab, setTab]                 = useState(_initTab)
   const [teamsDomain, setTeamsDomain] = useState('citi.com')
 
-  // Update tab if navigated to with a specific tab in state
+  // Update tab from router state OR ?onboard= query param
   useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search)
+      if (p.get('onboard')) { setTab('onboarding'); return }
+    } catch {}
     if (location.state?.tab) setTab(location.state.tab)
-  }, [location.state?.tab])
+  }, [location.search, location.state?.tab])
 
   useEffect(() => {
     getConfig().then(r => { if (r.data?.teams_domain) setTeamsDomain(r.data.teams_domain) })

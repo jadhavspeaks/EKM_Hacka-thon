@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import SearchPage from './pages/Search'
 import Documents from './pages/Documents'
 import Intelligence from './pages/Intelligence'
+import LearnPage from './pages/LearnPage'
 
 // ── Theme (inline) ───────────────────────────────────────────────────────
 const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch { return 'arctic' } })()
@@ -43,6 +44,11 @@ const NAV = [
 ]
 
 export default function App() {
+  // Standalone pages (no sidebar)
+  if (window.location.pathname === '/learn') {
+    return <Routes><Route path="/learn" element={<LearnPage />} /></Routes>
+  }
+
   return (
     <div className="flex h-screen overflow-hidden"
       style={{ background: T.bg, fontFamily: T.font }}>
@@ -113,6 +119,7 @@ export default function App() {
           <Route path="/search"       element={<SearchPage />}   />
           <Route path="/documents"    element={<Documents />}    />
           <Route path="/intelligence" element={<Intelligence />} />
+          <Route path="/learn"        element={<LearnPage />}    />
         </Routes>
       </main>
     </div>
