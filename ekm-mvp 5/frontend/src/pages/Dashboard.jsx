@@ -8,7 +8,7 @@ import { RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle,
          Wifi, WifiOff, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 // ── Theme (inline) ───────────────────────────────────────────────────────
-const _tid = (() => { try { return localStorage.getItem('ekm-theme')||'arctic' } catch(e) { return 'arctic' } })()
+const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
   border:'#dde3eb', borderLt:'#e4eaf2',

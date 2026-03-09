@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 // ── Theme (inline, same as app) ──────────────────────────────────────────────
-const _tid = (() => { try { return localStorage.getItem('ekm-theme') || 'arctic' } catch(e) { return 'arctic' } })()
+const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   bg: '#f4f6f8', bgCard: '#ffffff', bgMid: '#f0f4f8', bgDeep: '#1e2a3a',
   border: '#dde3eb', borderLt: '#e4eaf2',
