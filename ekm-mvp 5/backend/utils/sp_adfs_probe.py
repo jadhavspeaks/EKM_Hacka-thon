@@ -249,8 +249,40 @@ def probe_sites(session):
                     ok(f"Unique site roots found via search ({len(site_urls_found)}):")
                     for u in sorted(site_urls_found):
                         print(f"    {u}")
-                    print()
-                    ok("Test these URLs - try each in probe Step 3 or update sharepoint_sites.txt")
+
+                    # Auto-write discovered URLs to sharepoint_sites.txt
+                    sites_file = None
+                    for candidate in [
+                        Path(__file__).parent.parent.parent / "sharepoint_sites.txt",
+                        Path(__file__).parent.parent / "sharepoint_sites.txt",
+                        Path.cwd().parent / "sharepoint_sites.txt",
+                        Path.cwd() / "sharepoint_sites.txt",
+                    ]:
+                        if candidate.exists():
+                            sites_file = candidate
+                            break
+
+                    if sites_file:
+                        lines = [
+                            "# SharePoint Sites - auto-discovered by sp_adfs_probe.py",
+                            "# Host: " + SP_HOST + " | NTLM domain: " + DOMAIN,
+                            "# Edit this file to keep only the sites you want to index.",
+                            "#",
+                            "# SITE TYPES:",
+                            "#   /sites/ -> Wiki mode  - crawls Site Pages + Document Libraries",
+                            "#   /teams/ -> Docs mode  - crawls Document Libraries only",
+                            "#",
+                        ]
+                        for u in sorted(site_urls_found):
+                            lines.append(u)
+                        sites_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                        print()
+                        ok(f"AUTO-WRITTEN: {sites_file}")
+                        ok(f"sharepoint_sites.txt updated with {len(site_urls_found)} discovered sites.")
+                        ok("Review and remove any sites you don't want to index, then restart uvicorn and sync.")
+                    else:
+                        warn("Could not find sharepoint_sites.txt to auto-update.")
+                        warn("Manually add the URLs above to sharepoint_sites.txt")
             except Exception as e:
                 info(f"Search parse error: {e}")
                 info(f"Raw response snippet: {str(d)[:500]}")
