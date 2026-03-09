@@ -356,8 +356,12 @@ async def fetch_documents(updated_since: datetime | None = None) -> list[Documen
 
     for site_url in site_urls:
         site_url     = site_url.strip().rstrip("/")
+        # Remove accidental double-slashes after the protocol
+        proto, _, rest = site_url.partition("://")
+        site_url = proto + "://" + re.sub(r"/+", "/", rest)
         site_display = site_url.split("/")[-1]
         is_teams     = "/teams/" in site_url.lower()
+        # Non-standard paths (e.g. /citi.net) treated as wiki mode
         site_mode    = "teams-docs" if is_teams else "sites-wiki"
         logger.info(f"SharePoint '{site_display}': mode={site_mode}")
 

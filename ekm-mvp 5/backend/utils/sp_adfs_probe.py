@@ -234,15 +234,21 @@ def probe_sites(session):
                     cells = {c["Key"]: c["Value"] for c in row.get("Cells",{}).get("results",[])}
                     path  = cells.get("Path","")
                     title = cells.get("Title","")
-                    if path and "/_api" not in path and "/Lists/" not in path:
-                        # Extract site root from path
-                        parts = path.replace(SP_BASE,"").split("/")
-                        if len(parts) >= 3:
-                            site_root = SP_BASE + "/" + parts[1] + "/" + parts[2]
-                        else:
-                            site_root = path
-                        site_urls_found.add(site_root)
-                        info(f"  Path: {path[:80]}  | Title: {title[:40]}")
+                    if not path or "/_api" in path or "/Lists/" in path:
+                        continue
+                    info(f"  Path: {path[:90]}  | Title: {title[:40]}")
+                    # Fix: strip base cleanly then split non-empty parts
+                    # path = https://share.nam.nsroot.net/citi.net/sites/foo/page
+                    # want = https://share.nam.nsroot.net/citi.net/sites/foo
+                    rel   = path.replace(SP_BASE, "").lstrip("/")
+                    parts = [p for p in rel.split("/") if p]
+                    if len(parts) >= 2:
+                        site_root = SP_BASE + "/" + "/".join(parts[:2])
+                    elif len(parts) == 1:
+                        site_root = SP_BASE + "/" + parts[0]
+                    else:
+                        continue
+                    site_urls_found.add(site_root)
 
                 if site_urls_found:
                     print()
