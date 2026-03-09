@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getOnboardingPath } from '../api'
 import {
-  X, Plus, BookOpen, ExternalLink, RefreshCw, Copy, Check,
+  X, BookOpen, ExternalLink, RefreshCw, Check,
   ChevronDown, ChevronRight, ArrowLeft, Layers, Tag,
   FileText, GitCommit, Boxes, AlertCircle, Clock, Share2
 } from 'lucide-react'
