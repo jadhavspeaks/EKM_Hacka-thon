@@ -278,30 +278,12 @@ async def get_sources():
     # ── 2. At-risk experts (same logic as intelligence page) ──────────────────
     async def _experts_at_risk_count():
         try:
-            pipeline = [
-                {"$match": {"author": {"$ne": None}}},
-                {"$group": {
-                    "_id": "$author",
-                    "doc_count": {"$sum": 1},
-                    "last_active": {"$max": "$updated_at"},
-                }},
-                {"$match": {"doc_count": {"$gte": 3}}},
-            ]
-            people = await db.documents.aggregate(pipeline).to_list(length=5000)
-            count = 0
-            for p in people:
-                name = p["_id"] or ""
-                is_vendor = bool(vendor_pattern.search(name))
-                last = p.get("last_active")
-                if isinstance(last, str):
-                    try: last = datetime.fromisoformat(last.replace("Z", "+00:00"))
-                    except: last = None
-                if last and not last.tzinfo:
-                    last = last.replace(tzinfo=timezone.utc)
-                days_inactive = (now - last).days if last else 999
-                if days_inactive >= 90 or is_vendor:
-                    count += 1
-            return count
+            from routes.intelligence import _cache_get, get_experts_at_risk
+            cached = _cache_get("experts")
+            if cached:
+                return cached.get("total_at_risk", 0)
+            result = await get_experts_at_risk()
+            return result.get("total_at_risk", 0) if isinstance(result, dict) else 0
         except Exception:
             return 0
 

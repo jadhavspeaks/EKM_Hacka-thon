@@ -675,7 +675,7 @@ async def get_experts_at_risk():
         "total_at_risk":  len(at_risk),
         "critical_count": sum(1 for p in at_risk if p["risk_level"] == "critical"),
         "high_count":     sum(1 for p in at_risk if p["risk_level"] == "high"),
-        "experts":        at_risk[:30],
+        "experts":        at_risk,
     })
 
 
