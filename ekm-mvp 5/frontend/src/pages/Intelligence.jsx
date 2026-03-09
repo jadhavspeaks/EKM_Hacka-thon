@@ -1085,7 +1085,8 @@ function GapsTab() {
           ✅ No knowledge gaps detected — all active systems have documentation!
         </div>
       ) : (
-        {gapFilter && (
+        <>
+          {gapFilter && (
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
             Showing <span className="font-semibold capitalize" style={{color:'#0891b2'}}>{gapFilter}</span> gaps
             <button onClick={() => setGapFilter(null)} className="text-xs underline text-gray-400">clear</button>
@@ -1125,6 +1126,7 @@ function GapsTab() {
             </div>
           ))}
         </div>
+        </>
       )}
     </div>
   )
@@ -1187,7 +1189,8 @@ function ExpertsAtRiskTab({ teamsDomain }) {
           ✅ No at-risk experts detected.
         </div>
       ) : (
-        {riskFilter && (
+        <>
+          {riskFilter && (
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
             Showing <span className="font-semibold capitalize" style={{color:'#0891b2'}}>{riskFilter}</span> experts
             <button onClick={() => setRiskFilter(null)} className="text-xs underline text-gray-400">clear</button>
@@ -1240,6 +1243,7 @@ function ExpertsAtRiskTab({ teamsDomain }) {
             </div>
           ))}
         </div>
+        </>
       )}
     </div>
   )
