@@ -19,7 +19,7 @@ import {
   BookOpen, Layers, Calendar, Activity
 } from 'lucide-react'
 
-// ── Metadata pill ─────────────────────────────────────────────────────────────
+// -- Metadata pill -------------------------------------------------------------
 function Pill({ label, value, color }) {
   if (!value) return null
   return (
@@ -32,7 +32,7 @@ function Pill({ label, value, color }) {
   )
 }
 
-// ── Status colour helper ──────────────────────────────────────────────────────
+// -- Status colour helper ------------------------------------------------------
 function statusColors(status = '') {
   const s = status.toLowerCase()
   if (['done','closed','resolved','complete','completed'].some(x => s.includes(x)))
@@ -54,7 +54,7 @@ function priorityColors(priority = '') {
   return 'bg-slate-100 text-slate-600'
 }
 
-// ── Jira-specific layout ──────────────────────────────────────────────────────
+// -- Jira-specific layout ------------------------------------------------------
 function JiraLayout({ doc }) {
   const m = doc.metadata || {}
   return (
@@ -156,7 +156,7 @@ function JiraLayout({ doc }) {
   )
 }
 
-// ── Confluence-specific layout ────────────────────────────────────────────────
+// -- Confluence-specific layout ------------------------------------------------
 function ConfluenceLayout({ doc }) {
   const m = doc.metadata || {}
   return (
@@ -215,7 +215,7 @@ function ConfluenceLayout({ doc }) {
   )
 }
 
-// ── GitHub-specific layout ────────────────────────────────────────────────────
+// -- GitHub-specific layout ----------------------------------------------------
 function GitHubLayout({ doc }) {
   const m = doc.metadata || {}
   const ct = m.content_type || 'commit'
@@ -290,7 +290,7 @@ function GitHubLayout({ doc }) {
   )
 }
 
-// ── Generic fallback layout ───────────────────────────────────────────────────
+// -- Generic fallback layout ---------------------------------------------------
 function GenericLayout({ doc }) {
   return (
     <div className="space-y-4">
@@ -306,9 +306,9 @@ function GenericLayout({ doc }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ===============================================================================
 // MAIN DRAWER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ===============================================================================
 export default function DocumentDrawer({ docId, onClose }) {
   const [doc, setDoc]       = useState(null)
   const [loading, setLoading] = useState(false)

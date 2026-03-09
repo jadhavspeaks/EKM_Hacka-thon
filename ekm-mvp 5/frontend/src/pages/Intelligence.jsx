@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getDashboard, getAnalyticsStats, getHealthReport, getRiskReport, getOnboardingPath, getKnowledgeGaps, getExpertsAtRisk, getCoverageReport, getVelocity, getHandover, getHandoverProgress, saveHandoverProgress, searchPeople, getPersonProfile, getConfig } from '../api'
 import { Spinner, SourceBadge } from '../components/UI'
-// ── Theme (inline) ───────────────────────────────────────────────────────
+// -- Theme (inline) -------------------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
@@ -27,7 +27,7 @@ const T = _tid === 'slate' ? {
 }
 
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
 const RISK_COLOR = {
   critical: 'text-red-600 bg-red-50 border-red-200',
   high:     'text-orange-600 bg-orange-50 border-orange-200',
@@ -38,9 +38,9 @@ const RISK_ICON = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' 
 const HEALTH_COLOR = { good: 'text-blue-700', warning: 'text-yellow-600', poor: 'text-red-600' }
 const HEALTH_ICON  = { good: '✅', warning: '⚠️', poor: '❌' }
 
-// Teams deep link — opens a chat with the person
+// Teams deep link -- opens a chat with the person
 function teamsLink(name, domain) {
-  // Convert "Gandhi, Mihir [TECH]" → "mihir.gandhi@citi.com" (best effort)
+  // Convert "Gandhi, Mihir [TECH]" -> "mihir.gandhi@citi.com" (best effort)
   const clean = name
     .replace(/\[TECH.*?\]/gi, '')
     .replace(/\(.*?\)/g, '')
@@ -94,7 +94,7 @@ function SectionTitle({ children, sub }) {
   )
 }
 
-// ── Analytics Tab ─────────────────────────────────────────────────────────────
+// -- Analytics Tab -------------------------------------------------------------
 function AnalyticsTab() {
   const [searchData, setSearchData] = useState(null)
   const [corpusData, setCorpusData] = useState(null)
@@ -542,7 +542,7 @@ function HealthTab() {
   )
 }
 
-// ── Risk Tab ──────────────────────────────────────────────────────────────────
+// -- Risk Tab ------------------------------------------------------------------
 function RiskTab({ teamsDomain }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
@@ -691,7 +691,7 @@ function RiskTab({ teamsDomain }) {
   )
 }
 
-// ── People Tab ────────────────────────────────────────────────────────────────
+// -- People Tab ----------------------------------------------------------------
 function PeopleTab({ teamsDomain }) {
   const [query, setQuery]       = useState('')
   const [results, setResults]   = useState(null)
@@ -875,7 +875,7 @@ function PeopleTab({ teamsDomain }) {
   )
 }
 
-// ── Onboarding Tab ────────────────────────────────────────────────────────────
+// -- Onboarding Tab ------------------------------------------------------------
 function OnboardingTab() {
   const [topic, setTopic]     = useState('')
   const [data, setData]       = useState(null)
@@ -1007,7 +1007,7 @@ function OnboardingTab() {
   )
 }
 
-// ── Knowledge Gaps Tab ────────────────────────────────────────────────────────
+// -- Knowledge Gaps Tab --------------------------------------------------------
 function GapsTab() {
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1084,7 +1084,7 @@ function GapsTab() {
   )
 }
 
-// ── Experts At Risk Tab ───────────────────────────────────────────────────────
+// -- Experts At Risk Tab -------------------------------------------------------
 function ExpertsAtRiskTab({ teamsDomain }) {
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1175,7 +1175,7 @@ function ExpertsAtRiskTab({ teamsDomain }) {
   )
 }
 
-// ── Coverage Tab ──────────────────────────────────────────────────────────────
+// -- Coverage Tab --------------------------------------------------------------
 function CoverageTab() {
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1280,7 +1280,7 @@ function CoverageTab() {
   )
 }
 
-// ── Knowledge Velocity Tab ───────────────────────────────────────────────────
+// -- Knowledge Velocity Tab ---------------------------------------------------
 function VelocityTab() {
   const [input, setInput]     = useState('')
   const [topic, setTopic]     = useState('')
@@ -1347,11 +1347,11 @@ function VelocityTab() {
           <div className="text-xs text-gray-400 bg-gray-50 rounded p-3 text-left font-mono">
             total_docs: {data.total_docs} &nbsp;·&nbsp; parsed_dates: {data.parsed_count}
             <br/>
-            <span className="text-teal-600">→ Try running a full sync first: Dashboard → Sync All (Force Full)</span>
+            <span className="text-teal-600">-> Try running a full sync first: Dashboard → Sync All (Force Full)</span>
           </div>
           <a href="/api/intelligence/velocity/debug" target="_blank"
             className="text-xs text-teal-600 underline hover:text-teal-700 block">
-            Open velocity debug (shows raw date formats in DB) →
+            Open velocity debug (shows raw date formats in DB) ->
           </a>
         </div>
       )}
@@ -1421,7 +1421,7 @@ function VelocityTab() {
   )
 }
 
-// ── Handover Tracker Tab ──────────────────────────────────────────────────────
+// -- Handover Tracker Tab ------------------------------------------------------
 function HandoverTab({ teamsDomain }) {
   const [name, setName]       = useState('')
   const [input, setInput]     = useState('')
@@ -1599,7 +1599,7 @@ function HandoverTab({ teamsDomain }) {
 }
 
 
-// ── Main Intelligence Page — Sidebar Layout ──────────────────────────────────
+// -- Main Intelligence Page -- Sidebar Layout ----------------------------------
 
 const NAV_GROUPS = [
   {

@@ -6,7 +6,7 @@ import Documents from './pages/Documents'
 import Intelligence from './pages/Intelligence'
 import LearnPage from './pages/LearnPage'
 
-// ── Theme (inline) ───────────────────────────────────────────────────────
+// -- Theme (inline) -------------------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
@@ -33,7 +33,7 @@ function toggleTheme() {
   localStorage.setItem('ekm-theme', _tid==='slate'?'arctic':'slate')
   window.location.reload()
 }
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 
 const NAV = [

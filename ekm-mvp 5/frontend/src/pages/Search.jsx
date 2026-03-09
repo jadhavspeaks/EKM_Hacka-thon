@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import DocumentDrawer from '../components/DocumentDrawer'
-// ── Theme (inline) ───────────────────────────────────────────────────────
+// -- Theme (inline) -------------------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
@@ -43,7 +43,7 @@ const ROLE_ICONS = {
   'SharePoint Author': '📁',
 }
 
-// ── Person Profile Banner (intent detected) ──────────────────────────────────
+// -- Person Profile Banner (intent detected) ----------------------------------
 function PersonBanner({ name, onClose }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -151,7 +151,7 @@ function PersonBanner({ name, onClose }) {
   )
 }
 
-// ── Compact SME sidebar ───────────────────────────────────────────────────────
+// -- Compact SME sidebar -------------------------------------------------------
 function SMESidebar({ smes }) {
   const [expanded, setExpanded] = useState(false)
   if (!smes?.length) return null
@@ -223,7 +223,7 @@ function SMESidebar({ smes }) {
   )
 }
 
-// ── Best Answer snippet ───────────────────────────────────────────────────────
+// -- Best Answer snippet -------------------------------------------------------
 function BestAnswer({ answer }) {
   if (!answer?.trim()) return null
   return (
@@ -239,7 +239,7 @@ function BestAnswer({ answer }) {
   )
 }
 
-// ── Result card ───────────────────────────────────────────────────────────────
+// -- Result card ---------------------------------------------------------------
 function ResultCard({ doc, onClick }) {
   const m = doc.metadata || {}
   const preview = doc.content_preview || doc.content?.slice(0, 200) || ''
@@ -311,7 +311,7 @@ function ResultCard({ doc, onClick }) {
   )
 }
 
-// ── GitHub card ───────────────────────────────────────────────────────────────
+// -- GitHub card ---------------------------------------------------------------
 function GitHubCard({ doc, onClick }) {
   const m = doc.metadata || {}
   const ct = m.content_type || 'commit'
@@ -359,7 +359,7 @@ function GitHubCard({ doc, onClick }) {
   )
 }
 
-// ── Section header ─────────────────────────────────────────────────────────────
+// -- Section header -------------------------------------------------------------
 function SectionHeader({ color, label, count, icon: Icon }) {
   return (
     <div className="flex items-center gap-2 mb-3">
@@ -375,9 +375,9 @@ function SectionHeader({ color, label, count, icon: Icon }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ===============================================================================
 // MAIN SEARCH PAGE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ===============================================================================
 const SOURCES = ['', 'confluence', 'jira', 'github']
 const SRC_LABELS = { '': 'All Sources', confluence: 'Confluence', jira: 'Jira', github: 'GitHub', sharepoint: 'SharePoint' }
 const SRC_COLORS = { confluence: '#7c3aed', jira: '#ea580c', github: '#475569', sharepoint: '#2563eb' }

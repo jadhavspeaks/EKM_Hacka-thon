@@ -3,7 +3,7 @@ import { listDocuments } from '../api'
 import { SourceBadge, EmptyState, Spinner } from '../components/UI'
 import { ExternalLink, FileText, Clock, Tag, ChevronLeft, ChevronRight, Filter, Eye } from 'lucide-react'
 import DocumentDrawer from '../components/DocumentDrawer'
-// ── Theme (inline) ───────────────────────────────────────────────────────
+// -- Theme (inline) -------------------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',

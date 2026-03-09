@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns'
 
-// ─── Source Badge ─────────────────────────────────────────────────────────────
+// --- Source Badge -------------------------------------------------------------
 const SOURCE_CONFIG = {
   sharepoint: { label: 'SharePoint', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
   confluence: { label: 'Confluence', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
@@ -18,7 +18,7 @@ export function SourceBadge({ type }) {
   )
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// --- Status Badge -------------------------------------------------------------
 const STATUS_CONFIG = {
   success: 'bg-green-100 text-green-700',
   failed:  'bg-red-100 text-red-700',
@@ -35,7 +35,7 @@ export function StatusBadge({ status }) {
   )
 }
 
-// ─── Document Card ────────────────────────────────────────────────────────────
+// --- Document Card ------------------------------------------------------------
 export function DocCard({ doc, onClick }) {
   const isGitHub = doc.source_type === 'github'
   const m = doc.metadata || {}
@@ -135,7 +135,7 @@ export function DocCard({ doc, onClick }) {
   )
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
+// --- Empty State --------------------------------------------------------------
 export function EmptyState({ icon, title, subtitle }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -146,7 +146,7 @@ export function EmptyState({ icon, title, subtitle }) {
   )
 }
 
-// ─── Spinner ──────────────────────────────────────────────────────────────────
+// --- Spinner ------------------------------------------------------------------
 export function Spinner({ size = 'md' }) {
   const sz = size === 'sm' ? 'w-4 h-4' : 'w-8 h-8'
   return (
@@ -154,7 +154,7 @@ export function Spinner({ size = 'md' }) {
   )
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
+// --- Stat Card ----------------------------------------------------------------
 export function StatCard({ label, value, sub, color = 'teal' }) {
   const colors = {
     teal:   'text-teal-600',

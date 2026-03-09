@@ -1,4 +1,4 @@
-// EKM Theme — Arctic (default) + Slate
+// EKM Theme - Arctic (default) + Slate
 // Read once at module load. Toggle reloads the page.
 
 const _id = localStorage.getItem('ekm-theme') || 'arctic'

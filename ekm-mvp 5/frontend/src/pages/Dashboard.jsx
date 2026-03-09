@@ -7,7 +7,7 @@ import { RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle,
          Users, FileText, Zap, ChevronRight, Settings, ChevronDown, ChevronUp, Check,
          Wifi, WifiOff, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
-// ── Theme (inline) ───────────────────────────────────────────────────────
+// -- Theme (inline) -------------------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   id:'slate', bg:'#f4f6f8', bgCard:'#ffffff', bgMid:'#f8f9fa',
@@ -513,7 +513,7 @@ export default function Dashboard() {
 
   const load=async()=>{
     try {
-      // v3.6+: all analytics are embedded in /api/sources — single call only
+      // v3.6+: all analytics are embedded in /api/sources -- single call only
       const dash = await getDashboard()
       setData(dash.data)
     } catch(e){
@@ -580,7 +580,7 @@ export default function Dashboard() {
     </div>
   )
 
-  // All values pre-computed by backend — zero math on frontend
+  // All values pre-computed by backend -- zero math on frontend
   const liveSrcs = (data?.sources||[]).filter(s=>s.source_type!=='servicenow')
   const total    = data?.total_documents ?? 0
   const searches = data?.total_searches  ?? 0

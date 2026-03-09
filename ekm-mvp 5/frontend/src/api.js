@@ -14,7 +14,7 @@ export const getSyncSourcesMeta   = () => api.get('/sync/sources-meta')
 export const getGithubRepos       = () => api.get('/sync/github-repos')
 export const testSharePoint       = () => api.get('/sync/sharepoint-test')
 
-// Returns {job_id} immediately — use getSyncStatus to poll
+// Returns {job_id} immediately - use getSyncStatus to poll
 export const triggerSync = (sourceType, forceFull = false, spacesOverride = [], projectsOverride = [], reposOverride = []) =>
   api.post('/sync', {
     source_type:       sourceType || null,

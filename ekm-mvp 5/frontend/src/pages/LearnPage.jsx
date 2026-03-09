@@ -12,7 +12,7 @@ import {
   FileText, GitCommit, Boxes, AlertCircle, Clock, Share2
 } from 'lucide-react'
 
-// ── Theme (inline, same as app) ──────────────────────────────────────────────
+// -- Theme (inline, same as app) ----------------------------------------------
 const _tid = localStorage.getItem('ekm-theme') || 'arctic'
 const T = _tid === 'slate' ? {
   bg: '#f4f6f8', bgCard: '#ffffff', bgMid: '#f0f4f8', bgDeep: '#1e2a3a',
@@ -193,7 +193,7 @@ function SourceSection({ sourceType, docs }) {
   )
 }
 
-// ── Topic chip input ──────────────────────────────────────────────────────────
+// -- Topic chip input ----------------------------------------------------------
 function TopicInput({ topics, onChange }) {
   const [input, setInput] = useState('')
   const inputRef = useRef(null)
@@ -250,7 +250,7 @@ function TopicInput({ topics, onChange }) {
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// -- Main page -----------------------------------------------------------------
 export default function LearnPage() {
   const navigate = useNavigate()
 
