@@ -180,6 +180,16 @@ async def test_sharepoint():
     }
 
 
+@sync_router.get("/github-repos")
+async def get_github_repos():
+    """Return list of configured GitHub repos for the configure panel."""
+    try:
+        from connectors.github import _get_repos
+        repos = _get_repos()
+        return {"repos": [{"key": r, "name": r.split("/")[-1], "full_name": r} for r in repos]}
+    except Exception as e:
+        return {"repos": [], "error": str(e)}
+
 @sync_router.get("/sources-meta")
 async def get_sources_meta():
     """
