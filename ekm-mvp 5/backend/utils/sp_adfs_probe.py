@@ -15,7 +15,31 @@ Usage (from Anaconda Prompt, inside backend folder):
 """
 
 import os, sys, re, requests, urllib3
+from pathlib import Path
 urllib3.disable_warnings()
+
+def _load_dotenv():
+    for candidate in [
+        Path(__file__).parent.parent / ".env",
+        Path(__file__).parent.parent.parent / ".env",
+        Path.cwd() / ".env",
+        Path.cwd().parent / ".env",
+    ]:
+        if candidate.exists():
+            print(f"  [INFO] Loading .env from: {candidate}")
+            for line in candidate.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
+            return
+    print("  [WARN] No .env file found")
+
+_load_dotenv()
 
 USERNAME = os.environ.get("SHAREPOINT_USERNAME", "")
 PASSWORD = os.environ.get("SHAREPOINT_PASSWORD", "")
