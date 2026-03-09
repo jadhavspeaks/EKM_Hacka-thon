@@ -825,6 +825,8 @@ function PeopleTab({ teamsDomain }) {
               </div>
             </div>
           )}
+        </div>
+      )}
 
       {/* Search results */}
       {results && !profile && !loading && (
