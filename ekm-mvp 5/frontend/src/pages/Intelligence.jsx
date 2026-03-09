@@ -561,19 +561,39 @@ function RiskTab({ teamsDomain }) {
   if (!data)   return <div className="text-gray-500 text-sm">Could not load risk report.</div>
 
   const s = data.summary || {}
-  const topics = (data.topics || []).filter(t =>
-    filter === 'all' || t.risk_level === filter
-  )
+  const topics = (data.topics || []).filter(t => {
+    if (filter === 'all') return true
+    if (filter === 'vendor')   return t.vendor_pct > 50
+    if (filter === 'internal') return t.internal_pct > 50
+    return t.risk_level === filter
+  })
 
   return (
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Critical Topics"  value={s.critical_topics}  color="text-red-600" />
-        <StatCard label="High Risk Topics" value={s.high_risk_topics} color="text-orange-500" />
-        <StatCard label="Vendor Contributors" value={s.vendor_contributors}
-          sub={`${s.vendor_pct}% of all contributors`} color="text-purple-600" />
-        <StatCard label="Internal Contributors" value={s.internal_contributors} color="text-blue-700" />
+        {[
+          { key: 'critical', label: 'Critical Topics',      value: s.critical_topics,      color: 'red' },
+          { key: 'high',     label: 'High Risk Topics',     value: s.high_risk_topics,     color: 'orange' },
+          { key: 'vendor',   label: 'Vendor Contributors',  value: s.vendor_contributors,  color: 'purple', sub: `${s.vendor_pct}% of contributors` },
+          { key: 'internal', label: 'Internal Contributors',value: s.internal_contributors, color: 'blue' },
+        ].map(tile => {
+          const active = filter === tile.key
+          const BORDER = { red:'border-red-400', orange:'border-orange-400', purple:'border-purple-400', blue:'border-blue-400' }
+          const BG     = { red:'bg-red-50', orange:'bg-orange-50', purple:'bg-purple-50', blue:'bg-blue-50' }
+          const TEXT   = { red:'text-red-600', orange:'text-orange-500', purple:'text-purple-600', blue:'text-blue-700' }
+          return (
+            <div key={tile.key}
+              onClick={() => setFilter(active ? 'all' : tile.key)}
+              className={`card p-4 cursor-pointer transition-all border-2 ${active ? BORDER[tile.color]+' '+BG[tile.color]+' shadow-md' : 'border-transparent hover:border-gray-200'}`}
+            >
+              <div className={`text-2xl font-bold ${TEXT[tile.color]}`}>{tile.value ?? '-'}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{tile.label}</div>
+              {tile.sub && <div className="text-xs text-gray-400 mt-0.5">{tile.sub}</div>}
+              {active && <div className="text-xs mt-1 font-semibold" style={{color:'#0891b2'}}>- click to clear</div>}
+            </div>
+          )
+        })}
       </div>
 
       {/* Vendor dependency banner */}
@@ -1011,8 +1031,9 @@ function OnboardingTab() {
 
 // -- Knowledge Gaps Tab --------------------------------------------------------
 function GapsTab() {
-  const [data, setData]     = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
+  const [gapFilter, setGapFilter] = useState(null)
 
   useEffect(() => {
     getKnowledgeGaps().then(r => { setData(r.data); setLoading(false) })
@@ -1037,9 +1058,26 @@ function GapsTab() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Total Gaps"    value={data.total_gaps}    color="text-yellow-600" />
-        <StatCard label="Critical Gaps" value={data.critical_gaps} color="text-red-600" />
-        <StatCard label="High Priority" value={data.high_gaps}     color="text-orange-500" />
+        {[
+          { key: null,       label: 'Total Gaps',    value: data.total_gaps,    color: 'yellow' },
+          { key: 'critical', label: 'Critical Gaps', value: data.critical_gaps, color: 'red' },
+          { key: 'high',     label: 'High Priority', value: data.high_gaps,     color: 'orange' },
+        ].map(tile => {
+          const active = gapFilter === tile.key
+          const BORDER = { yellow:'border-yellow-400', red:'border-red-400', orange:'border-orange-400' }
+          const BG     = { yellow:'bg-yellow-50', red:'bg-red-50', orange:'bg-orange-50' }
+          const TEXT   = { yellow:'text-yellow-600', red:'text-red-600', orange:'text-orange-500' }
+          return (
+            <div key={String(tile.key)}
+              onClick={() => setGapFilter(active ? null : tile.key)}
+              className={`card p-4 cursor-pointer transition-all border-2 ${active ? BORDER[tile.color]+' '+BG[tile.color]+' shadow-md' : 'border-transparent hover:border-gray-200'}`}
+            >
+              <div className={`text-2xl font-bold ${TEXT[tile.color]}`}>{tile.value ?? '-'}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{tile.label}</div>
+              {active && tile.key && <div className="text-xs mt-1 font-semibold" style={{color:'#0891b2'}}>- click to clear</div>}
+            </div>
+          )
+        })}
       </div>
 
       {data.gaps?.length === 0 ? (
@@ -1047,8 +1085,14 @@ function GapsTab() {
           ✅ No knowledge gaps detected — all active systems have documentation!
         </div>
       ) : (
+        {gapFilter && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            Showing <span className="font-semibold capitalize" style={{color:'#0891b2'}}>{gapFilter}</span> gaps
+            <button onClick={() => setGapFilter(null)} className="text-xs underline text-gray-400">clear</button>
+          </div>
+        )}
         <div className="space-y-3">
-          {data.gaps.map((gap, i) => (
+          {(gapFilter ? data.gaps.filter(g => g.severity === gapFilter) : data.gaps).map((gap, i) => (
             <div key={i} className={`card p-4 border ${SEV_COLOR[gap.severity]}`}>
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
@@ -1088,8 +1132,9 @@ function GapsTab() {
 
 // -- Experts At Risk Tab -------------------------------------------------------
 function ExpertsAtRiskTab({ teamsDomain }) {
-  const [data, setData]     = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
+  const [riskFilter, setRiskFilter] = useState(null)
 
   useEffect(() => {
     getExpertsAtRisk().then(r => { setData(r.data); setLoading(false) })
@@ -1115,9 +1160,26 @@ function ExpertsAtRiskTab({ teamsDomain }) {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="At Risk Experts" value={data.total_at_risk}  color="text-orange-600" />
-        <StatCard label="Critical"        value={data.critical_count} color="text-red-600" />
-        <StatCard label="High Risk"       value={data.high_count}     color="text-orange-500" />
+        {[
+          { key: null,       label: 'At Risk Experts', value: data.total_at_risk,  color: 'orange' },
+          { key: 'critical', label: 'Critical',         value: data.critical_count, color: 'red' },
+          { key: 'high',     label: 'High Risk',        value: data.high_count,     color: 'amber' },
+        ].map(tile => {
+          const active = riskFilter === tile.key
+          const BORDER = { orange:'border-orange-400', red:'border-red-400', amber:'border-amber-400' }
+          const BG     = { orange:'bg-orange-50', red:'bg-red-50', amber:'bg-amber-50' }
+          const TEXT   = { orange:'text-orange-600', red:'text-red-600', amber:'text-amber-600' }
+          return (
+            <div key={String(tile.key)}
+              onClick={() => setRiskFilter(active ? null : tile.key)}
+              className={`card p-4 cursor-pointer transition-all border-2 ${active ? BORDER[tile.color]+' '+BG[tile.color]+' shadow-md' : 'border-transparent hover:border-gray-200'}`}
+            >
+              <div className={`text-2xl font-bold ${TEXT[tile.color]}`}>{tile.value ?? '-'}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{tile.label}</div>
+              {active && tile.key && <div className="text-xs mt-1 font-semibold" style={{color:'#0891b2'}}>- click to clear</div>}
+            </div>
+          )
+        })}
       </div>
 
       {data.experts?.length === 0 ? (
@@ -1125,8 +1187,14 @@ function ExpertsAtRiskTab({ teamsDomain }) {
           ✅ No at-risk experts detected.
         </div>
       ) : (
+        {riskFilter && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            Showing <span className="font-semibold capitalize" style={{color:'#0891b2'}}>{riskFilter}</span> experts
+            <button onClick={() => setRiskFilter(null)} className="text-xs underline text-gray-400">clear</button>
+          </div>
+        )}
         <div className="space-y-3">
-          {data.experts.map((expert, i) => (
+          {(riskFilter ? data.experts.filter(e => e.risk_level === riskFilter) : data.experts).map((expert, i) => (
             <div key={i} className={`card p-4 border ${RISK_COLOR[expert.risk_level]}`}>
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
