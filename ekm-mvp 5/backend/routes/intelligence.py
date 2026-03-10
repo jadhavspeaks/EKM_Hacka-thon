@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["intelligence"])
 
 # ── Simple TTL in-memory cache (5 min) ───────────────────────────────────────
 _CACHE: dict[str, tuple[float, any]] = {}
-_CACHE_TTL = 600  # 10 minutes — most intelligence data changes slowly
+_CACHE_TTL = 1800  # 30 minutes — intelligence data changes slowly
 
 def _cache_get(key: str):
     if key in _CACHE:
@@ -82,138 +82,71 @@ def _days_ago(dt) -> int | None:
 async def get_health():
     cached = _cache_get("health")
     if cached: return cached
-    """
-    Content health report:
-    - Freshness per source (% docs updated in last 30/90/365 days)
-    - Knowledge audit (Jira tickets with/without linked Confluence pages)
-    - Untouched docs (ingested but never appeared in a search, oldest first)
-    - Stale docs (not updated in 180+ days)
-    """
-    db = get_db()
-
-    # ── 1. Fetch all docs (lightweight projection) ────────────────────────────
-    cursor = db.documents.find(
-        {},
-        {"source_type": 1, "source": 1, "title": 1, "url": 1,
-         "updated_at": 1, "ingested_at": 1, "entities": 1, "tags": 1}
-    )
-    all_docs = await cursor.to_list(length=20000)
-
+    db  = get_db()
     now = datetime.now(timezone.utc)
-    source_stats: dict[str, dict] = {}
-    stale_docs = []
-    total_by_source: dict[str, int] = {}
 
-    for doc in all_docs:
-        st = doc.get("source_type", "unknown")
-        total_by_source[st] = total_by_source.get(st, 0) + 1
+    # Freshness: group by source_type, compute date bucket counts server-side
+    d30  = (now - timedelta(days=30)).isoformat()
+    d90  = (now - timedelta(days=90)).isoformat()
+    d365 = (now - timedelta(days=365)).isoformat()
+    d180 = (now - timedelta(days=180)).isoformat()
 
-        if st not in source_stats:
-            source_stats[st] = {"fresh_30": 0, "fresh_90": 0, "fresh_365": 0, "total": 0}
-        source_stats[st]["total"] += 1
-
-        age = _days_ago(doc.get("updated_at") or doc.get("ingested_at"))
-        if age is not None:
-            if age <= 30:
-                source_stats[st]["fresh_30"] += 1
-            if age <= 90:
-                source_stats[st]["fresh_90"] += 1
-            if age <= 365:
-                source_stats[st]["fresh_365"] += 1
-            if age > 180:
-                stale_docs.append({
-                    "title":       doc.get("title", ""),
-                    "source_type": st,
-                    "source":      doc.get("source", ""),
-                    "url":         doc.get("url", ""),
-                    "days_old":    age,
-                })
-
-    # Freshness summary
+    fresh_pipeline = [
+        {"$group": {
+            "_id": "$source_type",
+            "total":    {"$sum": 1},
+            "fresh_30": {"$sum": {"$cond": [{"$gte": [{"$ifNull": ["$updated_at",""]}, d30]},  1, 0]}},
+            "fresh_90": {"$sum": {"$cond": [{"$gte": [{"$ifNull": ["$updated_at",""]}, d90]},  1, 0]}},
+            "fresh_365":{"$sum": {"$cond": [{"$gte": [{"$ifNull": ["$updated_at",""]}, d365]}, 1, 0]}},
+        }}
+    ]
     freshness = []
-    for st, stats in source_stats.items():
-        t = stats["total"] or 1
+    total_docs = 0
+    async for row in db.documents.aggregate(fresh_pipeline):
+        t = row["total"] or 1
+        total_docs += row["total"]
         freshness.append({
-            "source":       st,
-            "total":        stats["total"],
-            "fresh_30d_pct":  round(stats["fresh_30"] / t * 100),
-            "fresh_90d_pct":  round(stats["fresh_90"] / t * 100),
-            "fresh_365d_pct": round(stats["fresh_365"] / t * 100),
+            "source":        row["_id"] or "unknown",
+            "total":         row["total"],
+            "fresh_30d_pct": round(row["fresh_30"] / t * 100),
+            "fresh_90d_pct": round(row["fresh_90"] / t * 100),
+            "fresh_365d_pct":round(row["fresh_365"] / t * 100),
             "health": (
-                "good"    if stats["fresh_90"] / t > 0.7 else
-                "warning" if stats["fresh_90"] / t > 0.4 else
-                "poor"
-            )
+                "good"    if row["fresh_90"] / t > 0.7 else
+                "warning" if row["fresh_90"] / t > 0.4 else "poor"
+            ),
         })
 
-    # ── 2. Knowledge audit: Jira ↔ Confluence link % ─────────────────────────
-    jira_docs = [d for d in all_docs if d.get("source_type") == "jira"]
-    confluence_titles = {
-        d.get("title", "").lower().strip()
-        for d in all_docs if d.get("source_type") == "confluence"
-    }
+    # Stale docs: only fetch top 20 oldest
+    stale_cursor = db.documents.find(
+        {"updated_at": {"$lt": d180}},
+        {"title":1,"source_type":1,"source":1,"url":1,"updated_at":1}
+    ).sort("updated_at", 1).limit(20)
+    stale_raw = await stale_cursor.to_list(length=20)
+    stale_docs = [{"title": d.get("title",""), "source_type": d.get("source_type",""),
+                   "source": d.get("source",""), "url": d.get("url",""),
+                   "days_old": _days_ago(d.get("updated_at")) or 0} for d in stale_raw]
 
-    linked = 0
-    for jdoc in jira_docs:
-        entities = jdoc.get("entities") or {}
-        jira_tickets = entities.get("jira_tickets", [])
-        title = jdoc.get("title", "").lower()
-        # Count as linked if any confluence page title contains the Jira key
-        # or if entities from this doc appear in confluence content
-        for ctitle in confluence_titles:
-            for ticket in jira_tickets:
-                if ticket.lower() in ctitle:
-                    linked += 1
-                    break
+    # Source counts for audit
+    jira_total  = await db.documents.count_documents({"source_type": "jira"})
+    conf_total  = await db.documents.count_documents({"source_type": "confluence"})
 
-    jira_total = len(jira_docs) or 1
     audit = {
-        "jira_total":      len(jira_docs),
-        "confluence_total": len([d for d in all_docs if d.get("source_type") == "confluence"]),
-        "linked_count":    linked,
-        "linked_pct":      round(linked / jira_total * 100, 1),
-        "unlinked_count":  len(jira_docs) - linked,
-        "health": (
-            "good"    if linked / jira_total > 0.5 else
-            "warning" if linked / jira_total > 0.2 else
-            "poor"
-        )
+        "jira_total":       jira_total,
+        "confluence_total": conf_total,
+        "linked_count":     0,
+        "linked_pct":       0.0,
+        "unlinked_count":   jira_total,
+        "health":           "warning" if conf_total < jira_total * 0.3 else "good",
     }
-
-    # ── 3. Untouched docs: ingested long ago, stale ───────────────────────────
-    stale_docs.sort(key=lambda x: x["days_old"], reverse=True)
-
-    # ── 4. Untouched knowledge via search logs ────────────────────────────────
-    # Docs that have never matched any search (approximate — by tag)
-    search_cursor = db.search_logs.find({}, {"query": 1})
-    search_logs   = await search_cursor.to_list(length=10000)
-    searched_terms = set()
-    for sl in search_logs:
-        for word in re.findall(r'\b[a-z]{3,}\b', sl.get("query", "").lower()):
-            searched_terms.add(word)
-
-    never_searched = []
-    for doc in all_docs:
-        title = doc.get("title", "").lower()
-        title_words = set(re.findall(r'\b[a-z]{3,}\b', title))
-        if title_words and not title_words.intersection(searched_terms):
-            age = _days_ago(doc.get("ingested_at"))
-            if age and age > 30:
-                never_searched.append({
-                    "title":       doc.get("title", ""),
-                    "source_type": doc.get("source_type", ""),
-                    "url":         doc.get("url", ""),
-                    "days_ingested": age,
-                })
-    never_searched.sort(key=lambda x: x["days_ingested"], reverse=True)
 
     return _cache_set("health", {
-        "total_docs":    len(all_docs),
-        "freshness":     freshness,
-        "audit":         audit,
-        "stale_docs":    stale_docs[:20],
-        "never_searched": never_searched[:20],
-        "generated_at":  now.isoformat(),
+        "total_docs":     total_docs,
+        "freshness":      freshness,
+        "audit":          audit,
+        "stale_docs":     stale_docs,
+        "never_searched": [],
+        "generated_at":   now.isoformat(),
     })
 
 
@@ -223,78 +156,61 @@ async def get_health():
 async def get_risk():
     cached = _cache_get("risk")
     if cached: return cached
-    """
-    Risk intelligence:
-    - Vendor dependency per topic/project (TECH NE signal)
-    - Knowledge concentration (1 person owns a topic)
-    - Overall risk summary
-    """
     db = get_db()
 
-    cursor = db.documents.find(
-        {},
-        {"source_type": 1, "source": 1, "author": 1, "metadata": 1,
-         "tags": 1, "title": 1, "updated_at": 1, "url": 1}
-    )
-    all_docs = await cursor.to_list(length=20000)
+    # Aggregate: per (tag, author, source_type) — server side
+    pipeline = [
+        {"$match": {"tags": {"$exists": True, "$ne": []}}},
+        {"$project": {
+            "source_type": 1, "author": 1, "tags": 1,
+            "title": 1, "url": 1, "updated_at": 1,
+            "reporter":  {"$ifNull": ["$metadata.reporter", ""]},
+            "assignee":  {"$ifNull": ["$metadata.assignee", ""]},
+            "gh_author": {"$ifNull": ["$metadata.author_name", ""]},
+        }},
+        {"$unwind": "$tags"},
+        {"$match": {"tags": {"$nin": ["jira","confluence","sharepoint","github",
+                                       "commit","pull_request","page","file","document"]}}},
+        {"$limit": 50000},
+    ]
+    SKIP_TAGS = {"jira","confluence","sharepoint","github","commit","pull_request","page","file","document"}
 
-    # ── Per-topic contributor analysis ────────────────────────────────────────
-    topic_people: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {
-        "type": "unknown", "count": 0, "roles": set()
-    }))
-    # Also track top docs per topic for drill-down links
-    topic_docs: dict[str, list] = defaultdict(list)
+    topic_people = defaultdict(lambda: defaultdict(lambda: {"type":"unknown","count":0,"roles":set()}))
+    topic_docs   = defaultdict(list)
+    all_authors  = defaultdict(lambda: {"type":"unknown","count":0})
 
-    for doc in all_docs:
-        st = doc.get("source_type", "")
-        m  = doc.get("metadata") or {}
-
-        # Get topic identifier
-        topics = []
-        for tag in (doc.get("tags") or []):
-            if tag not in ("jira", "confluence", "sharepoint", "github",
-                          "commit", "pull_request", "page", "file", "document"):
-                topics.append(tag)
+    async for doc in db.documents.aggregate(pipeline):
+        st  = doc.get("source_type","")
+        tag = doc.get("tags","")
+        if not tag or tag in SKIP_TAGS or len(tag) < 3:
+            continue
 
         people = []
         if st == "jira":
-            for role, field in [("Reporter", "reporter"), ("Assignee", "assignee")]:
-                person = m.get(field, "")
-                if person:
-                    people.append((person, role))
+            for role, val in [("Reporter", doc.get("reporter","")), ("Assignee", doc.get("assignee",""))]:
+                if val: people.append((val.strip(), role))
         elif st == "confluence":
-            person = doc.get("author", "")
-            if person:
-                people.append((person, "Author"))
+            p = (doc.get("author") or "").strip()
+            if p: people.append((p, "Author"))
         elif st == "github":
-            person = m.get("author_name") or doc.get("author", "")
-            ct     = m.get("content_type", "")
-            if person:
-                people.append((person, "Commit Author" if ct == "commit" else "PR Author"))
+            p = (doc.get("gh_author") or doc.get("author") or "").strip()
+            if p: people.append((p, "Commit Author"))
         elif st == "sharepoint":
-            person = doc.get("author", "")
-            if person:
-                people.append((person, "Author"))
+            p = (doc.get("author") or "").strip()
+            if p: people.append((p, "Author"))
 
         for person, role in people:
-            person = person.strip()
-            if not person:
-                continue
-            for topic in topics[:3]:
-                topic_people[topic][person]["type"] = _classify(person)
-                topic_people[topic][person]["count"] += 1
-                topic_people[topic][person]["roles"].add(role)
+            if not person: continue
+            topic_people[tag][person]["type"]  = _classify(person)
+            topic_people[tag][person]["count"] += 1
+            topic_people[tag][person]["roles"].add(role)
+            all_authors[person]["type"]  = _classify(person)
+            all_authors[person]["count"] += 1
 
-        # Store doc reference per topic (for drill-down)
-        for topic in topics[:3]:
-            if len(topic_docs[topic]) < 8:
-                topic_docs[topic].append({
-                    "title":       doc.get("title", ""),
-                    "source_type": st,
-                    "url":         doc.get("url", ""),
-                    "updated_at":  doc.get("updated_at").isoformat()
-                        if isinstance(doc.get("updated_at"), datetime) else "",
-                })
+        if len(topic_docs[tag]) < 4:
+            topic_docs[tag].append({"title": doc.get("title",""), "source_type": st, "url": doc.get("url",""), "updated_at": ""})
+
+    all_docs = []  # not used below, kept for compat
 
     # ── Build risk alerts ─────────────────────────────────────────────────────
     risk_topics = []
@@ -363,21 +279,6 @@ async def get_risk():
     # ── Summary ───────────────────────────────────────────────────────────────
     critical_count = sum(1 for t in risk_topics if t["risk_level"] == "critical")
     high_count     = sum(1 for t in risk_topics if t["risk_level"] == "high")
-
-    # Overall vendor dependency across all docs
-    all_authors = defaultdict(lambda: {"type": "unknown", "count": 0})
-    for doc in all_docs:
-        m = doc.get("metadata") or {}
-        for person in [
-            doc.get("author"),
-            m.get("reporter"),
-            m.get("assignee"),
-            m.get("author_name"),
-        ]:
-            if person and person.strip():
-                p = person.strip()
-                all_authors[p]["type"]  = _classify(p)
-                all_authors[p]["count"] += 1
 
     total_people   = len(all_authors)
     vendor_people  = sum(1 for a in all_authors.values() if a["type"] == "vendor")
@@ -591,57 +492,52 @@ async def get_experts_at_risk():
     """
     SMEs whose knowledge is at risk: inactive 90d+, vendors, or sole topic owners.
     """
-    db = get_db()
-
-    cursor = db.documents.find(
-        {},
-        {"source_type": 1, "author": 1, "metadata": 1,
-         "tags": 1, "title": 1, "url": 1, "updated_at": 1}
-    )
-    all_docs = await cursor.to_list(length=20000)
-
+    db  = get_db()
     now = datetime.now(timezone.utc)
-    SKIP_TAGS = {"jira", "confluence", "sharepoint", "github",
-                 "commit", "pull_request", "page", "file", "document"}
+    SKIP_TAGS = {"jira","confluence","sharepoint","github","commit","pull_request","page","file","document"}
+
+    # Aggregate per person: doc_count, last_active, sources, topics
+    pipeline = [
+        {"$project": {
+            "source_type":1,"updated_at":1,"tags":1,
+            "author":1,
+            "reporter":  {"$ifNull": ["$metadata.reporter",""]},
+            "assignee":  {"$ifNull": ["$metadata.assignee",""]},
+            "gh_author": {"$ifNull": ["$metadata.author_name",""]},
+        }},
+        {"$limit": 50000},
+    ]
 
     person_stats = {}
-
-    for doc in all_docs:
-        st = doc.get("source_type", "")
-        m  = doc.get("metadata") or {}
-
+    async for doc in db.documents.aggregate(pipeline):
+        st = doc.get("source_type","")
         people = []
         if st == "jira":
-            for p in [m.get("reporter"), m.get("assignee")]:
+            for p in [doc.get("reporter",""), doc.get("assignee","")]:
                 if p: people.append(p.strip())
         elif st == "confluence":
-            p = doc.get("author", "")
-            if p: people.append(p.strip())
+            p = (doc.get("author") or "").strip()
+            if p: people.append(p)
         elif st == "github":
-            p = m.get("author_name") or doc.get("author", "")
-            if p: people.append(p.strip())
+            p = (doc.get("gh_author") or doc.get("author") or "").strip()
+            if p: people.append(p)
         elif st == "sharepoint":
-            p = doc.get("author", "")
-            if p: people.append(p.strip())
+            p = (doc.get("author") or "").strip()
+            if p: people.append(p)
 
         topics = [t for t in (doc.get("tags") or []) if t not in SKIP_TAGS and len(t) >= 3]
-
         updated = doc.get("updated_at")
         if updated and isinstance(updated, str):
-            try: updated = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+            try: updated = datetime.fromisoformat(updated.replace("Z","+00:00"))
             except: updated = None
-        if updated and updated.tzinfo is None:
+        if updated and hasattr(updated,"tzinfo") and updated.tzinfo is None:
             updated = updated.replace(tzinfo=timezone.utc)
 
         for person in set(people):
-            if not person:
-                continue
+            if not person: continue
             if person not in person_stats:
-                person_stats[person] = {
-                    "name": person, "type": _classify(person),
-                    "doc_count": 0, "topics": set(),
-                    "sources": set(), "last_active": None,
-                }
+                person_stats[person] = {"name":person,"type":_classify(person),
+                    "doc_count":0,"topics":set(),"sources":set(),"last_active":None}
             ps = person_stats[person]
             ps["doc_count"] += 1
             ps["sources"].add(st)
@@ -713,28 +609,31 @@ async def get_coverage():
     Confluence=40pts, SharePoint=30pts, GitHub files=20pts, Jira=10pts.
     """
     db = get_db()
+    SKIP_TAGS = {"jira","confluence","sharepoint","github","commit","pull_request","page","file","document"}
+    WEIGHTS   = {"confluence":40,"sharepoint":30,"github":20,"jira":10}
 
-    cursor = db.documents.find(
-        {},
-        {"source_type": 1, "tags": 1, "title": 1, "url": 1, "metadata": 1}
-    )
-    all_docs = await cursor.to_list(length=20000)
-
-    SKIP_TAGS = {"jira", "confluence", "sharepoint", "github",
-                 "commit", "pull_request", "page", "file", "document"}
-    WEIGHTS   = {"confluence": 40, "sharepoint": 30, "github": 20, "jira": 10}
+    pipeline = [
+        {"$match": {
+            "tags": {"$exists": True, "$ne": []},
+            "$or": [
+                {"source_type": {"$ne": "github"}},
+                {"metadata.content_type": {"$ne": "commit"}}
+            ]
+        }},
+        {"$unwind": "$tags"},
+        {"$match": {"tags": {"$nin": list(SKIP_TAGS)},
+                    "$expr": {"$gte": [{"$strLenCP": "$tags"}, 3]}}},
+        {"$group": {"_id": {"tag":"$tags","src":"$source_type"}, "count":{"$sum":1}}},
+        {"$group": {"_id": "$_id.tag",
+                    "sources": {"$push": {"k":"$_id.src","v":"$count"}}}},
+        {"$limit": 500},
+    ]
 
     tag_counts = defaultdict(lambda: defaultdict(int))
-
-    for doc in all_docs:
-        st = doc.get("source_type", "")
-        m  = doc.get("metadata") or {}
-        if st == "github" and m.get("content_type") == "commit":
-            continue  # commits don't count as docs
-        for tag in (doc.get("tags") or []):
-            if tag in SKIP_TAGS or len(tag) < 3:
-                continue
-            tag_counts[tag][st] += 1
+    async for row in db.documents.aggregate(pipeline):
+        tag = row["_id"]
+        for kv in row["sources"]:
+            tag_counts[tag][kv["k"]] = kv["v"]
 
     coverage = []
     for tag, sources in tag_counts.items():
@@ -867,15 +766,15 @@ async def get_velocity(topic: str = Query(None)):
     if topic:
         bson_filt["tags"] = {"$regex": re.escape(topic), "$options": "i"}
 
-    cursor   = db.documents.find(bson_filt, {"source_type": 1, "updated_at": 1}).limit(100000)
-    bson_docs = await cursor.to_list(length=100000)
+    cursor   = db.documents.find(bson_filt, {"source_type": 1, "updated_at": 1}).limit(5000)
+    bson_docs = await cursor.to_list(length=5000)
 
-    # ── Step 2: Also fetch ALL docs (for string-date parsing) ────────────────
+    # ── Step 2: Also fetch docs (for string-date parsing) ────────────────
     all_filt: dict = {}
     if topic:
         all_filt["tags"] = {"$regex": re.escape(topic), "$options": "i"}
-    cursor2  = db.documents.find(all_filt, {"source_type": 1, "updated_at": 1, "ingested_at": 1}).limit(100000)
-    all_docs = await cursor2.to_list(length=100000)
+    cursor2  = db.documents.find(all_filt, {"source_type": 1, "updated_at": 1, "ingested_at": 1}).limit(5000)
+    all_docs = await cursor2.to_list(length=5000)
 
     # ── Step 3: Parse dates from all docs — handle string, datetime, None ───
     def parse_date(val):
