@@ -284,7 +284,7 @@ async def get_risk():
     vendor_people  = sum(1 for a in all_authors.values() if a["type"] == "vendor")
     internal_people = sum(1 for a in all_authors.values() if a["type"] == "internal")
 
-    return {
+    return _cache_set("risk", {
         "summary": {
             "total_topics":     len(risk_topics),
             "critical_topics":  critical_count,
@@ -295,7 +295,7 @@ async def get_risk():
             "vendor_pct": round(vendor_people / total_people * 100) if total_people else 0,
         },
         "topics": risk_topics[:50],
-    }
+    })
 
 
 # ── Onboarding (Learning Path) ───────────────────────────────────────────────
