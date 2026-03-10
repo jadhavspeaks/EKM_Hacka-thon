@@ -154,7 +154,7 @@ function priorityColors(priority = '') {
 }
 
 // -- Jira-specific layout ------------------------------------------------------
-function JiraLayout({ doc }) {
+function JiraLayout({ doc, cfg }) {
   const m = doc.metadata || {}
   return (
     <div className="space-y-5">
@@ -728,7 +728,7 @@ export default function DocumentDrawer({ docId, onClose }) {
               </div>
 
               {/* Source-specific body */}
-              {doc.source_type === 'jira'       && <JiraLayout       doc={doc}/>}
+              {doc.source_type === 'jira'       && <JiraLayout       doc={doc} cfg={cfg}/>}
               {doc.source_type === 'confluence'  && <ConfluenceLayout doc={doc}/>}
               {doc.source_type === 'github'      && <GitHubLayout     doc={doc}/>}
               {(doc.source_type === 'sharepoint' || !['jira','confluence','github'].includes(doc.source_type))

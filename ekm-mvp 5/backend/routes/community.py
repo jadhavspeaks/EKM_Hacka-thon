@@ -40,7 +40,7 @@ class VoteBody(BaseModel):
 # ---------------------------------------------------------------------------
 @router.post("/flag")
 async def flag_document(body: FlagBody):
-    db = await get_db()
+    db = get_db()
     flag = {
         "doc_id":    body.doc_id,
         "flag_type": body.flag_type,
@@ -55,7 +55,7 @@ async def flag_document(body: FlagBody):
 
 @router.get("/flags/{doc_id}")
 async def get_flags(doc_id: str):
-    db = await get_db()
+    db = get_db()
     flags = await db["community_flags"].find(
         {"doc_id": doc_id}, {"_id": 0}
     ).to_list(50)
@@ -69,7 +69,7 @@ async def get_flags(doc_id: str):
 async def add_annotation(body: AnnotationBody):
     if not body.text.strip():
         raise HTTPException(status_code=400, detail="Annotation text required")
-    db = await get_db()
+    db = get_db()
     import uuid
     annotation = {
         "id":               str(uuid.uuid4())[:8],
@@ -87,7 +87,7 @@ async def add_annotation(body: AnnotationBody):
 
 @router.get("/annotations/{doc_id}")
 async def get_annotations(doc_id: str):
-    db = await get_db()
+    db = get_db()
     items = await db["community_annotations"].find(
         {"doc_id": doc_id}, {"_id": 0}
     ).sort("created_at", -1).to_list(100)
@@ -96,7 +96,7 @@ async def get_annotations(doc_id: str):
 
 @router.post("/vote")
 async def vote_annotation(body: VoteBody):
-    db = await get_db()
+    db = get_db()
     delta = 1 if body.direction == "up" else -1
     await db["community_annotations"].update_one(
         {"id": body.annotation_id},
@@ -110,7 +110,7 @@ async def vote_annotation(body: VoteBody):
 # ---------------------------------------------------------------------------
 @router.get("/leaderboard")
 async def get_leaderboard(limit: int = Query(20, le=50)):
-    db = await get_db()
+    db = get_db()
 
     # Gather contribution counts per author
     scores: dict[str, dict] = {}
@@ -170,7 +170,7 @@ async def get_leaderboard(limit: int = Query(20, le=50)):
 # ---------------------------------------------------------------------------
 @router.get("/digest")
 async def get_digest():
-    db  = await get_db()
+    db  = get_db()
     now = datetime.now(timezone.utc)
     week_ago = (now - timedelta(days=7)).isoformat()
 
