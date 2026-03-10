@@ -490,81 +490,91 @@ async def get_onboarding_path(
 @router.get("/gaps")
 async def get_knowledge_gaps():
     """
-    Undocumented systems: topics active in Jira/GitHub but with zero Confluence/SharePoint pages.
+    Undocumented systems: tags active in Jira/GitHub with zero Confluence/SharePoint docs.
+    Uses aggregation pipeline -- no full collection scan.
     """
     try:
-        return await _get_knowledge_gaps_impl()
+        db = get_db()
+        SKIP_TAGS = {"jira","confluence","sharepoint","github",
+                     "commit","pull_request","page","file","document","issue","ticket"}
+
+        # One aggregation: unwind tags, group by (tag, source_type), count
+        pipeline = [
+            {"$match": {"tags": {"$exists": True, "$ne": []}}},
+            {"$unwind": "$tags"},
+            {"$match": {
+                "tags": {"$nin": list(SKIP_TAGS)},
+                "$expr": {"$gte": [{"$strLenCP": "$tags"}, 3]}
+            }},
+            {"$group": {
+                "_id": {"tag": "$tags", "source_type": "$source_type"},
+                "count": {"$sum": 1},
+                "samples": {"$push": {
+                    "$cond": [
+                        {"$lt": [{"$size": {"$ifNull": ["$samples", []]}}, 3]},
+                        {"title": "$title", "source_type": "$source_type", "url": "$url"},
+                        "$$REMOVE"
+                    ]
+                }}
+            }},
+            {"$group": {
+                "_id": "$_id.tag",
+                "sources": {"$push": {"src": "$_id.source_type", "count": "$count"}},
+                "samples": {"$first": "$samples"}
+            }},
+            {"$limit": 2000}
+        ]
+
+        tag_data = {}
+        async for row in db.documents.aggregate(pipeline, allowDiskUse=True):
+            tag = row["_id"]
+            if not tag or not isinstance(tag, str):
+                continue
+            src_map = {s["src"]: s["count"] for s in row.get("sources", [])}
+            tag_data[tag] = {
+                "jira":        src_map.get("jira", 0),
+                "github":      src_map.get("github", 0),
+                "confluence":  src_map.get("confluence", 0),
+                "sharepoint":  src_map.get("sharepoint", 0),
+                "samples":     row.get("samples", [])[:3],
+            }
+
+        gaps = []
+        for tag, d in tag_data.items():
+            activity   = d["jira"] + d["github"]
+            documented = d["confluence"] + d["sharepoint"]
+            if activity < 2 or documented > 0:
+                continue
+            severity = "critical" if activity >= 20 else "high" if activity >= 10 else "medium"
+            gaps.append({
+                "topic":           tag,
+                "severity":        severity,
+                "jira_tickets":    d["jira"],
+                "github_refs":     d["github"],
+                "activity_total":  activity,
+                "confluence_docs": d["confluence"],
+                "sharepoint_docs": d["sharepoint"],
+                "sample_docs":     d["samples"],
+                "recommendation":  (
+                    f"Create a Confluence page for '{tag}' -- "
+                    f"{activity} work items reference this topic with no documentation."
+                ),
+            })
+
+        severity_order = {"critical": 0, "high": 1, "medium": 2}
+        gaps.sort(key=lambda x: (severity_order[x["severity"]], -x["activity_total"]))
+
+        return {
+            "total_gaps":    len(gaps),
+            "critical_gaps": sum(1 for g in gaps if g["severity"] == "critical"),
+            "high_gaps":     sum(1 for g in gaps if g["severity"] == "high"),
+            "gaps":          gaps[:40],
+        }
+
     except Exception as e:
         logger.error(f"Knowledge gaps error: {e}", exc_info=True)
         from fastapi import HTTPException
-        raise HTTPException(status_code=500, detail=str(e))
-
-async def _get_knowledge_gaps_impl():
-    db = get_db()
-
-    cursor = db.documents.find(
-        {},
-        {"source_type": 1, "tags": 1, "title": 1, "url": 1, "updated_at": 1, "metadata": 1}
-    )
-    all_docs = await cursor.to_list(length=20000)
-
-    SKIP_TAGS = {"jira", "confluence", "sharepoint", "github",
-                 "commit", "pull_request", "page", "file", "document"}
-
-    tag_sources = defaultdict(lambda: defaultdict(int))
-    tag_samples = defaultdict(list)
-
-    for doc in all_docs:
-        st = doc.get("source_type", "")
-        for tag in (doc.get("tags") or []):
-            if tag in SKIP_TAGS or len(tag) < 3:
-                continue
-            tag_sources[tag][st] += 1
-            if len(tag_samples[tag]) < 3:
-                tag_samples[tag].append({
-                    "title":       doc.get("title", ""),
-                    "source_type": st,
-                    "url":         doc.get("url", ""),
-                })
-
-    gaps = []
-    for tag, sources in tag_sources.items():
-        jira_count       = sources.get("jira", 0)
-        github_count     = sources.get("github", 0)
-        confluence_count = sources.get("confluence", 0)
-        sharepoint_count = sources.get("sharepoint", 0)
-        activity         = jira_count + github_count
-        documented       = confluence_count + sharepoint_count
-
-        if activity < 3 or documented > 0:
-            continue
-
-        severity = "critical" if activity >= 20 else "high" if activity >= 10 else "medium"
-
-        gaps.append({
-            "topic":           tag,
-            "severity":        severity,
-            "jira_tickets":    jira_count,
-            "github_refs":     github_count,
-            "activity_total":  activity,
-            "confluence_docs": confluence_count,
-            "sharepoint_docs": sharepoint_count,
-            "sample_docs":     tag_samples[tag],
-            "recommendation":  (
-                f"Create a Confluence page for '{tag}' — "
-                f"{activity} work items reference this system with no documentation."
-            ),
-        })
-
-    severity_order = {"critical": 0, "high": 1, "medium": 2}
-    gaps.sort(key=lambda x: (severity_order[x["severity"]], -x["activity_total"]))
-
-    return {
-        "total_gaps":    len(gaps),
-        "critical_gaps": sum(1 for g in gaps if g["severity"] == "critical"),
-        "high_gaps":     sum(1 for g in gaps if g["severity"] == "high"),
-        "gaps":          gaps[:40],
-    }
+        raise HTTPException(status_code=500, detail=f"Gaps query failed: {e}")
 
 
 # ── Expert Knowledge At Risk ──────────────────────────────────────────────────
