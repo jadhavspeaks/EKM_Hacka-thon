@@ -490,60 +490,68 @@ async def get_onboarding_path(
 @router.get("/gaps")
 async def get_knowledge_gaps():
     """
-    Undocumented systems: tags active in Jira/GitHub with zero Confluence/SharePoint docs.
-    Uses aggregation pipeline -- no full collection scan.
+    Fast version: two small queries only.
+    1. Get distinct tags from Jira/GitHub (active sources)
+    2. Get distinct tags from Confluence/SharePoint (documented sources)
+    Gap = active tags not in documented set.
     """
     try:
         db = get_db()
-        SKIP_TAGS = {"jira","confluence","sharepoint","github",
-                     "commit","pull_request","page","file","document","issue","ticket"}
 
-        # One aggregation: unwind tags, group by (tag, source_type), count
+        SKIP = {"jira","confluence","sharepoint","github","commit",
+                "pull_request","page","file","document","issue","ticket",""}
+
+        # Query 1: distinct tags in active sources (Jira + GitHub only)
+        active_tags = await db.documents.distinct(
+            "tags",
+            {"source_type": {"$in": ["jira", "github"]}}
+        )
+
+        # Query 2: distinct tags in documented sources (Confluence + SharePoint)
+        doc_tags = set(await db.documents.distinct(
+            "tags",
+            {"source_type": {"$in": ["confluence", "sharepoint"]}}
+        ))
+
+        # Find gaps = active but not documented
+        gap_tags = [t for t in active_tags
+                    if t and t not in SKIP and t not in doc_tags and len(t) >= 3]
+
+        if not gap_tags:
+            return {"total_gaps": 0, "critical_gaps": 0, "high_gaps": 0, "gaps": []}
+
+        # One aggregation over the gap tags only (small set, fast)
         pipeline = [
-            {"$match": {"tags": {"$exists": True, "$ne": []}}},
-            {"$unwind": "$tags"},
             {"$match": {
-                "tags": {"$nin": list(SKIP_TAGS)},
-                "$expr": {"$gte": [{"$strLenCP": "$tags"}, 3]}
+                "source_type": {"$in": ["jira", "github"]},
+                "tags": {"$in": gap_tags[:60]}
             }},
+            {"$unwind": "$tags"},
+            {"$match": {"tags": {"$in": gap_tags[:60]}}},
             {"$group": {
-                "_id": {"tag": "$tags", "source_type": "$source_type"},
+                "_id": {"tag": "$tags", "src": "$source_type"},
                 "count": {"$sum": 1},
-                "samples": {"$push": {
-                    "$cond": [
-                        {"$lt": [{"$size": {"$ifNull": ["$samples", []]}}, 3]},
-                        {"title": "$title", "source_type": "$source_type", "url": "$url"},
-                        "$$REMOVE"
-                    ]
-                }}
+                "sample_title": {"$first": "$title"},
+                "sample_url":   {"$first": "$url"},
             }},
-            {"$group": {
-                "_id": "$_id.tag",
-                "sources": {"$push": {"src": "$_id.source_type", "count": "$count"}},
-                "samples": {"$first": "$samples"}
-            }},
-            {"$limit": 2000}
         ]
 
-        tag_data = {}
-        async for row in db.documents.aggregate(pipeline, allowDiskUse=True):
-            tag = row["_id"]
-            if not tag or not isinstance(tag, str):
-                continue
-            src_map = {s["src"]: s["count"] for s in row.get("sources", [])}
-            tag_data[tag] = {
-                "jira":        src_map.get("jira", 0),
-                "github":      src_map.get("github", 0),
-                "confluence":  src_map.get("confluence", 0),
-                "sharepoint":  src_map.get("sharepoint", 0),
-                "samples":     row.get("samples", [])[:3],
-            }
+        tag_counts = defaultdict(lambda: {"jira": 0, "github": 0, "sample": None})
+        async for row in db.documents.aggregate(pipeline):
+            tag = row["_id"]["tag"]
+            src = row["_id"]["src"]
+            tag_counts[tag][src] = row["count"]
+            if tag_counts[tag]["sample"] is None:
+                tag_counts[tag]["sample"] = {
+                    "title": row["sample_title"],
+                    "source_type": src,
+                    "url": row.get("sample_url", "")
+                }
 
         gaps = []
-        for tag, d in tag_data.items():
-            activity   = d["jira"] + d["github"]
-            documented = d["confluence"] + d["sharepoint"]
-            if activity < 2 or documented > 0:
+        for tag, d in tag_counts.items():
+            activity = d["jira"] + d["github"]
+            if activity < 2:
                 continue
             severity = "critical" if activity >= 20 else "high" if activity >= 10 else "medium"
             gaps.append({
@@ -552,13 +560,10 @@ async def get_knowledge_gaps():
                 "jira_tickets":    d["jira"],
                 "github_refs":     d["github"],
                 "activity_total":  activity,
-                "confluence_docs": d["confluence"],
-                "sharepoint_docs": d["sharepoint"],
-                "sample_docs":     d["samples"],
-                "recommendation":  (
-                    f"Create a Confluence page for '{tag}' -- "
-                    f"{activity} work items reference this topic with no documentation."
-                ),
+                "confluence_docs": 0,
+                "sharepoint_docs": 0,
+                "sample_docs":     [d["sample"]] if d["sample"] else [],
+                "recommendation":  f"Create a Confluence page for '{tag}' -- {activity} work items with no documentation.",
             })
 
         severity_order = {"critical": 0, "high": 1, "medium": 2}
