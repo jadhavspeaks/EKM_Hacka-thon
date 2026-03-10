@@ -492,6 +492,14 @@ async def get_knowledge_gaps():
     """
     Undocumented systems: topics active in Jira/GitHub but with zero Confluence/SharePoint pages.
     """
+    try:
+        return await _get_knowledge_gaps_impl()
+    except Exception as e:
+        logger.error(f"Knowledge gaps error: {e}", exc_info=True)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def _get_knowledge_gaps_impl():
     db = get_db()
 
     cursor = db.documents.find(
