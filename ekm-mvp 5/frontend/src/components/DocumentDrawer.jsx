@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { T } from '../theme'
-import { getDocument, flagDocument, getFlags, addAnnotation, getAnnotations, voteAnnotation } from '../api'
+import { getDocument, flagDocument, getFlags, addAnnotation, getAnnotations, voteAnnotation, getConfig } from '../api'
 import { SourceBadge, Spinner, TeamsButton } from './UI'
 import {
   X, ExternalLink, Clock, Tag, User, Hash, AlertCircle,
