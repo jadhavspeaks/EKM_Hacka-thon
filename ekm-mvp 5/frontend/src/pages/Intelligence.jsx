@@ -718,6 +718,11 @@ function PeopleTab({ teamsDomain }) {
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(false)
 
+  // Auto-load all contributors on mount
+  useEffect(() => {
+    setLoading(true)
+    searchPeople('').then(r => setResults(r.data)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
 
   const handleSearch = async (e) => {
     e.preventDefault()

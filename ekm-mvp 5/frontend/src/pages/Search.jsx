@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { searchDocs, getPersonProfile } from '../api'
+import { searchDocs, getPersonProfile, getConfig } from '../api'
 import { SourceBadge, EmptyState, Spinner, TeamsButton } from '../components/UI'
 import {
   Search as SearchIcon, ExternalLink, User, Clock, Tag,
@@ -255,7 +255,7 @@ function ResultCard({ doc, onClick }) {
           <div className="flex items-start justify-between gap-2 mb-1">
             <div>
               {doc.url ? (
-                <a href={doc.url} target="_blank" rel="noreferrer"
+                <a href={resolveUrl(doc, cfg)} target="_blank" rel="noreferrer"
                   className="font-semibold text-slate-900 text-sm hover:text-teal-700 transition-colors line-clamp-2">
                   {doc.title}
                 </a>
@@ -286,7 +286,7 @@ function ResultCard({ doc, onClick }) {
                 </span>
               )}
               {doc.url && (
-                <a href={doc.url} target="_blank" rel="noreferrer"
+                <a href={resolveUrl(doc, cfg)} target="_blank" rel="noreferrer"
                   className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-teal-50 hover:border-teal-300 text-slate-500 hover:text-teal-600 transition-all">
                   <ExternalLink size={12}/>
                 </a>
@@ -328,7 +328,7 @@ function GitHubCard({ doc, onClick }) {
           <div className="flex items-start justify-between gap-2">
             <div>
               {doc.url ? (
-                <a href={doc.url} target="_blank" rel="noreferrer"
+                <a href={resolveUrl(doc, cfg)} target="_blank" rel="noreferrer"
                   className="font-semibold text-slate-900 text-sm hover:text-teal-700 transition-colors line-clamp-1">
                   {doc.title}
                 </a>
@@ -342,7 +342,7 @@ function GitHubCard({ doc, onClick }) {
               </div>
             </div>
             {doc.url && (
-              <a href={doc.url} target="_blank" rel="noreferrer"
+              <a href={resolveUrl(doc, cfg)} target="_blank" rel="noreferrer"
                 className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-teal-50 hover:border-teal-300 text-slate-500 hover:text-teal-600 transition-all shrink-0">
                 <ExternalLink size={12}/>
               </a>
@@ -382,16 +382,40 @@ const SOURCES = ['', 'confluence', 'jira', 'github']
 const SRC_LABELS = { '': 'All Sources', confluence: 'Confluence', jira: 'Jira', github: 'GitHub', sharepoint: 'SharePoint' }
 const SRC_COLORS = { confluence: '#7c3aed', jira: '#ea580c', github: '#475569', sharepoint: '#2563eb' }
 
+// Build correct deep-link from doc fields
+function resolveUrl(doc, cfg) {
+  const stored = doc?.url || ""
+  try { const u = new URL(stored); if (u.pathname && u.pathname.length > 1) return stored } catch(e) {}
+  const id = doc?.external_id || ""
+  const src = doc?.source_type || ""
+  const m = doc?.metadata || {}
+  if (src === "jira" && id && cfg?.jira_url) return `${cfg.jira_url}/browse/${id}`
+  if (src === "confluence" && id && cfg?.confluence_url) return `${cfg.confluence_url}/pages/viewpage.action?pageId=${id}`
+  if (src === "github") {
+    const host = cfg?.github_host || "github.com"
+    const repo = m.repo_full_name || m.repo || ""
+    const ct = m.content_type || ""
+    if (ct === "commit" && m.sha) return `https://${host}/${repo}/commit/${m.sha}`
+    if (ct === "pull_request" && m.pr_number) return `https://${host}/${repo}/pull/${m.pr_number}`
+    if (ct === "file" && m.file_path) return `https://${host}/${repo}/blob/${m.branch || "main"}/${m.file_path}`
+    if (repo) return `https://${host}/${repo}`
+  }
+  return stored
+}
+
 export default function SearchPage() {
   const [query, setQuery]           = useState('')
   const [inputVal, setInputVal]     = useState('')
   const [sourceFilter, setFilter]   = useState('')
   const [results, setResults]       = useState(null)
   const [loading, setLoading]       = useState(false)
+  const [cfg, setCfg]               = useState(null)
   const [page, setPage]             = useState(1)
   const [personCard, setPersonCard] = useState(null)
   const [drawerDocId, setDrawerDocId] = useState(null)
   const inputRef = useRef(null)
+
+  useEffect(() => { getConfig().then(r => setCfg(r.data)).catch(() => {}) }, [])
 
   const doSearch = async (q, src, p = 1) => {
     if (!q?.trim()) return

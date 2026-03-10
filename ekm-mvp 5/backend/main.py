@@ -74,6 +74,12 @@ async def health():
 
 @app.get("/api/config")
 async def get_config():
-    """Frontend config — exposes non-sensitive settings."""
+    """Frontend config -- exposes non-sensitive settings."""
     s = get_settings()
-    return {"teams_domain": s.teams_domain}
+    github_host = s.github_host or "github.com"
+    return {
+        "teams_domain":   s.teams_domain,
+        "jira_url":       s.jira_url.rstrip("/"),
+        "confluence_url": s.confluence_url.rstrip("/"),
+        "github_host":    github_host,
+    }

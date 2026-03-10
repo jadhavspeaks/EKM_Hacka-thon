@@ -21,6 +21,40 @@ import {
   Lightbulb, Pencil, Users
 } from 'lucide-react'
 
+// Resolve the best deep-link URL for a document.
+// Falls back to building from external_id when stored url is just a base URL.
+function resolveUrl(doc, cfg) {
+  const stored = doc?.url || ""
+  // If stored URL has a real path (not just host), trust it
+  try {
+    const u = new URL(stored)
+    if (u.pathname && u.pathname.length > 1) return stored
+  } catch(e) { /* ignore */ }
+
+  // Build from external_id + metadata
+  const id  = doc?.external_id || ""
+  const src = doc?.source_type || ""
+  const m   = doc?.metadata    || {}
+
+  if (src === "jira" && id && cfg?.jira_url) {
+    return `${cfg.jira_url}/browse/${id}`
+  }
+  if (src === "confluence" && id && cfg?.confluence_url) {
+    return `${cfg.confluence_url}/pages/viewpage.action?pageId=${id}`
+  }
+  if (src === "github") {
+    const host   = cfg?.github_host || "github.com"
+    const repo   = m.repo_full_name || m.repo || ""
+    const ct     = m.content_type   || ""
+    if (ct === "commit"       && m.sha)         return `https://${host}/${repo}/commit/${m.sha}`
+    if (ct === "pull_request" && m.pr_number)   return `https://${host}/${repo}/pull/${m.pr_number}`
+    if (ct === "file"         && m.file_path)   return `https://${host}/${repo}/blob/${m.branch || "main"}/${m.file_path}`
+    if (repo) return `https://${host}/${repo}`
+  }
+  if (src === "sharepoint" && stored) return stored
+  return stored
+}
+
 // Prism.js for syntax highlighting - loaded from CDN
 let _prismLoaded = false
 function ensurePrism(cb) {
@@ -172,9 +206,7 @@ function JiraLayout({ doc }) {
       {doc.content && (
         <div>
           <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-medium">Description</p>
-          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50 rounded-lg p-3 border border-slate-200 max-h-64 overflow-y-auto">
-            {doc.content}
-          </div>
+          <SmartContent content={doc.content} maxHeight="max-h-64" />
         </div>
       )}
 
@@ -210,7 +242,7 @@ function JiraLayout({ doc }) {
           <Activity size={13}/>
           <span>{m.comment_count} comment{m.comment_count !== 1 ? 's' : ''} on this issue</span>
           {doc.url && (
-            <a href={doc.url} target="_blank" rel="noreferrer"
+            <a href={resolveUrl(doc, cfg)} target="_blank" rel="noreferrer"
               className="ml-auto text-xs text-teal-600 hover:underline flex items-center gap-1">
               View in Jira <ExternalLink size={10}/>
             </a>
@@ -271,9 +303,7 @@ function ConfluenceLayout({ doc }) {
       {doc.content && (
         <div>
           <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-medium">Content</p>
-          <div className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-4 border border-slate-200 max-h-96 overflow-y-auto whitespace-pre-wrap">
-            {doc.content}
-          </div>
+          <SmartContent content={doc.content} filePath={doc.title} maxHeight="max-h-96" />
         </div>
       )}
     </div>
@@ -360,15 +390,32 @@ function GenericLayout({ doc }) {
       {doc.content && (
         <div>
           <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-medium">Content</p>
-          <div className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-4 border border-slate-200 max-h-96 overflow-y-auto whitespace-pre-wrap">
-            {doc.content}
-          </div>
+          <SmartContent content={doc.content} filePath={doc.title} maxHeight="max-h-96" />
         </div>
       )}
     </div>
   )
 }
 
+
+// Smart content renderer - uses CodeBlock if content looks like code, else prose
+function SmartContent({ content, filePath, maxHeight = 'max-h-96' }) {
+  if (!content) return null
+  const lang = detectLang(filePath, content)
+  const looksLikeCode = lang !== null ||
+    /^(import |from |def |class |function |const |var |let |public |private |SELECT |CREATE |package )/.test(content.trim()) ||
+    (content.includes('
+') && (content.match(/^\s{2,}/m) || content.match(/[{}();]/g)?.length > 5))
+
+  if (looksLikeCode) {
+    return <CodeBlock content={content} filePath={filePath} />
+  }
+  return (
+    <div className={`text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-4 border border-slate-200 ${maxHeight} overflow-y-auto whitespace-pre-wrap`}>
+      {content}
+    </div>
+  )
+}
 
 // ===============================================================================
 // COMMUNITY PANEL
@@ -387,7 +434,7 @@ const ANN_TYPES = [
 ]
 
 function CommunityPanel({ docId }) {
-  const [open, setOpen]               = useState(false)
+  const [open, setOpen]               = useState(true)
   const [tab, setTab]                 = useState('flags')
   const [flags, setFlags]             = useState([])
   const [annotations, setAnnotations] = useState([])
@@ -434,101 +481,108 @@ function CommunityPanel({ docId }) {
   const total = flags.length + annotations.length
 
   return (
-    <div className="border-t border-slate-100">
+    <div className="border-t-2 border-teal-100">
       <button onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-3 bg-slate-50 hover:bg-slate-100 transition-colors">
-        <span className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          <Users size={12} className="text-teal-500"/>
-          Community
-          {total > 0 && <span className="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full text-xs font-semibold">{total}</span>}
+        className="w-full flex items-center justify-between px-5 py-3 bg-teal-50 hover:bg-teal-100 transition-colors">
+        <span className="flex items-center gap-2 text-sm text-teal-700 font-semibold">
+          <Users size={14} className="text-teal-600"/>
+          Community Contributions
+          {total > 0 && <span className="bg-teal-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">{total}</span>}
+          {total === 0 && <span className="text-xs text-teal-400 font-normal">— flag, annotate, vote</span>}
         </span>
-        {open ? <ChevronUp size={13} className="text-slate-400"/> : <ChevronDown size={13} className="text-slate-400"/>}
+        {open ? <ChevronUp size={14} className="text-teal-500"/> : <ChevronDown size={14} className="text-teal-500"/>}
       </button>
 
       {open && (
-        <div className="px-5 pb-5 bg-white">
-          <div className="mt-3 mb-3">
-            <input value={author} onChange={e => setAuthor(e.target.value)}
-              placeholder="Your name (optional)"
-              className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400 bg-slate-50"/>
-          </div>
-          <div className="flex gap-1 mb-3">
-            {[['flags','Flags'],['notes','Notes']].map(([k,l]) => (
-              <button key={k} onClick={() => setTab(k)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab===k ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                {l} {k==='flags' && flags.length > 0 ? `(${flags.length})` : k==='notes' && annotations.length > 0 ? `(${annotations.length})` : ''}
+        <div className="px-4 pb-4 pt-3 bg-white">
+
+          {/* ── Your name ── */}
+          <input value={author} onChange={e => setAuthor(e.target.value)}
+            placeholder="Your name (optional)"
+            className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-teal-400 bg-slate-50"/>
+
+          {done && <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3 font-medium">{done}</div>}
+
+          {/* ── Flag buttons — always visible ── */}
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Flag this document</p>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {FLAG_TYPES.map(ft => (
+              <button key={ft.key} onClick={() => submitFlag(ft.key)} disabled={submitting}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-xs font-semibold transition-all hover:shadow-sm active:scale-95 disabled:opacity-50 ${ft.color}`}>
+                <span>{ft.label}</span>
+                {flagCounts[ft.key] > 0 && (
+                  <span className="ml-2 bg-white bg-opacity-60 rounded-full px-1.5 py-0.5 font-bold text-xs">{flagCounts[ft.key]}</span>
+                )}
               </button>
             ))}
           </div>
-          {done && <div className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3">{done}</div>}
 
-          {tab === 'flags' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                {FLAG_TYPES.map(ft => (
-                  <button key={ft.key} onClick={() => submitFlag(ft.key)} disabled={submitting}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-all hover:shadow-sm disabled:opacity-50 ${ft.color}`}>
-                    <span>{ft.label}</span>
-                    {flagCounts[ft.key] > 0 && <span className="font-bold">{flagCounts[ft.key]}</span>}
-                  </button>
-                ))}
-              </div>
-              {flags.slice(0,5).map((f,i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-slate-500 py-1 border-b border-slate-50">
-                  <span className="font-medium capitalize">{f.flag_type.replace('_',' ')}</span>
-                  <span className="text-slate-300">·</span>
+          {/* Recent flags */}
+          {flags.length > 0 && (
+            <div className="mb-4 space-y-1">
+              {flags.slice(0,3).map((f,i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-slate-400 py-0.5">
+                  <Flag size={9} className="text-slate-300"/>
+                  <span className="font-medium capitalize text-slate-500">{f.flag_type.replace('_',' ')}</span>
+                  <span>·</span>
                   <span>{f.author}</span>
-                  <span className="ml-auto text-slate-300">{new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+                  <span className="ml-auto">{new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
                 </div>
               ))}
             </div>
           )}
 
-          {tab === 'notes' && (
-            <div className="space-y-3">
-              <div className="flex gap-1">
-                {ANN_TYPES.map(at => (
-                  <button key={at.key} onClick={() => setNoteType(at.key)}
-                    className={`px-2.5 py-1 rounded-md text-xs border font-medium transition-all ${noteType===at.key ? at.color : 'bg-white border-slate-200 text-slate-400'}`}>
-                    {at.label}
-                  </button>
-                ))}
+          {/* ── Divider ── */}
+          <div className="border-t border-slate-100 mb-3"/>
+
+          {/* ── Notes ── */}
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Add a note
+            {annotations.length > 0 && <span className="ml-1.5 bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full normal-case">{annotations.length}</span>}
+          </p>
+          <div className="flex gap-1 mb-2">
+            {ANN_TYPES.map(at => (
+              <button key={at.key} onClick={() => setNoteType(at.key)}
+                className={`px-2.5 py-1 rounded-md text-xs border font-medium transition-all ${noteType===at.key ? at.color : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                {at.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 mb-3">
+            <textarea value={noteText} onChange={e => setNoteText(e.target.value)}
+              placeholder="Add context, correction or suggestion visible to everyone..."
+              rows={2}
+              className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400 resize-none bg-slate-50"/>
+            <button onClick={submitNote} disabled={submitting || !noteText.trim()}
+              className="self-end p-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 transition-colors">
+              <Send size={12}/>
+            </button>
+          </div>
+
+          {/* Existing notes */}
+          {annotations.length === 0 && (
+            <p className="text-xs text-slate-400 text-center py-1">No notes yet — be the first to add context.</p>
+          )}
+          {annotations.map(a => (
+            <div key={a.id} className="bg-slate-50 rounded-lg p-3 border border-slate-100 mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${(ANN_TYPES.find(t => t.key===a.annotation_type)||ANN_TYPES[0]).color}`}>
+                  {(ANN_TYPES.find(t => t.key===a.annotation_type)||ANN_TYPES[0]).label}
+                </span>
+                <span className="text-xs font-medium text-slate-600">{a.author}</span>
+                <span className="ml-auto text-xs text-slate-400">{new Date(a.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
               </div>
-              <div className="flex gap-2">
-                <textarea value={noteText} onChange={e => setNoteText(e.target.value)}
-                  placeholder="Add a note, suggestion or correction visible to everyone..."
-                  rows={3}
-                  className="flex-1 text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400 resize-none bg-slate-50"/>
-                <button onClick={submitNote} disabled={submitting || !noteText.trim()}
-                  className="self-end p-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 transition-colors">
-                  <Send size={12}/>
+              <p className="text-xs text-slate-700 leading-relaxed mb-1.5">{a.text}</p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => vote(a.id,'up')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-green-600 transition-colors">
+                  <ThumbsUp size={10}/>{a.votes > 0 ? <span className="ml-0.5">{a.votes}</span> : null}
+                </button>
+                <button onClick={() => vote(a.id,'down')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors">
+                  <ThumbsDown size={10}/>
                 </button>
               </div>
-              {annotations.length === 0 && (
-                <p className="text-xs text-slate-400 text-center py-2">No notes yet. Be the first.</p>
-              )}
-              {annotations.map(a => (
-                <div key={a.id} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${(ANN_TYPES.find(t => t.key===a.annotation_type)||ANN_TYPES[0]).color}`}>
-                      {(ANN_TYPES.find(t => t.key===a.annotation_type)||ANN_TYPES[0]).label}
-                    </span>
-                    <span className="text-xs font-medium text-slate-600">{a.author}</span>
-                    <span className="ml-auto text-xs text-slate-300">{new Date(a.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
-                  </div>
-                  <p className="text-xs text-slate-700 leading-relaxed mb-2">{a.text}</p>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => vote(a.id,'up')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-green-600 transition-colors">
-                      <ThumbsUp size={10}/> {a.votes > 0 ? a.votes : ''}
-                    </button>
-                    <button onClick={() => vote(a.id,'down')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors">
-                      <ThumbsDown size={10}/>
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>
@@ -543,6 +597,10 @@ export default function DocumentDrawer({ docId, onClose }) {
   const [doc, setDoc]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    getConfig().then(r => setCfg(r.data)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!docId) { setDoc(null); return }
@@ -563,7 +621,7 @@ export default function DocumentDrawer({ docId, onClose }) {
 
   const copyUrl = () => {
     if (doc?.url) {
-      navigator.clipboard.writeText(doc.url)
+      navigator.clipboard.writeText(resolveUrl(doc, cfg))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     }
@@ -616,7 +674,7 @@ export default function DocumentDrawer({ docId, onClose }) {
         {doc && (
           <div className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 border-b border-slate-100">
             {doc.url && (
-              <a href={doc.url} target="_blank" rel="noreferrer"
+              <a href={resolveUrl(doc, cfg)} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors">
                 <ExternalLink size={11}/> Open in {doc.source_type === 'jira' ? 'Jira' : doc.source_type === 'confluence' ? 'Confluence' : doc.source_type === 'github' ? 'GitHub' : 'Source'}
               </a>
@@ -710,10 +768,10 @@ export default function DocumentDrawer({ docId, onClose }) {
               )}
             </div>
           )}
+
         </div>
 
-
-        {/* Community panel */}
+        {/* ── Community Panel ── visible below scroll, above footer */}
         {doc && !loading && <CommunityPanel docId={doc.id} />}
 
         {/* ── Footer ── */}
