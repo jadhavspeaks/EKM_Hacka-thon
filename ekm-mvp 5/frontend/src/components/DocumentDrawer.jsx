@@ -404,8 +404,8 @@ function SmartContent({ content, filePath, maxHeight = 'max-h-96' }) {
   const lang = detectLang(filePath, content)
   const looksLikeCode = lang !== null ||
     /^(import |from |def |class |function |const |var |let |public |private |SELECT |CREATE |package )/.test(content.trim()) ||
-    (content.includes('
-') && (content.match(/^\s{2,}/m) || content.match(/[{}();]/g)?.length > 5))
+    (/\n/.test(content) && (content.match(/^\s{2,}/m) || content.match(/[{}();]/g)?.length > 5))
+
 
   if (looksLikeCode) {
     return <CodeBlock content={content} filePath={filePath} />
