@@ -595,6 +595,7 @@ function CommunityPanel({ docId }) {
 // ===============================================================================
 export default function DocumentDrawer({ docId, onClose }) {
   const [doc, setDoc]       = useState(null)
+  const [cfg, setCfg]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
