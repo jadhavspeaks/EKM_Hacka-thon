@@ -240,7 +240,7 @@ function BestAnswer({ answer }) {
 }
 
 // -- Result card ---------------------------------------------------------------
-function ResultCard({ doc, onClick }) {
+function ResultCard({ doc, onClick, cfg }) {
   const m = doc.metadata || {}
   const preview = doc.content_preview || doc.content?.slice(0, 200) || ''
 
@@ -580,7 +580,7 @@ export default function SearchPage() {
                           count={confDocs.length}
                         />
                         <div className="space-y-2.5">
-                          {confDocs.map(doc => <ResultCard key={doc.id} doc={doc} onClick={() => setDrawerDocId(doc.id)}/>)}
+                          {confDocs.map(doc => <ResultCard key={doc.id} doc={doc} onClick={() => setDrawerDocId(doc.id)} cfg={cfg}/>)}
                         </div>
                       </div>
                     )}
@@ -599,7 +599,7 @@ export default function SearchPage() {
                           {otherDocs.map(doc =>
                             doc.source_type === 'github'
                               ? <GitHubCard key={doc.id} doc={doc} onClick={() => setDrawerDocId(doc.id)}/>
-                              : <ResultCard key={doc.id} doc={doc} onClick={() => setDrawerDocId(doc.id)}/>
+                              : <ResultCard key={doc.id} doc={doc} onClick={() => setDrawerDocId(doc.id)} cfg={cfg}/>
                           )}
                         </div>
                       </div>
