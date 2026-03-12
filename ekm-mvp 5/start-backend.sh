@@ -1,55 +1,61 @@
 #!/bin/bash
-# ─── EKM Backend — Conda Setup & Run ─────────────────────────────────────────
-set -e
+# ============================================================
+#  EKM Backend Starter — Linux / macOS
+#  Works with: Conda OR system Python (auto-detected)
+#  Place this file in project root (next to /backend)
+# ============================================================
 
-cd "$(dirname "$0")/backend"
+# Navigate to backend relative to this script's location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/backend"
 
-echo ""
-echo "╔══════════════════════════════════════╗"
-echo "║   EKM Backend — Conda Setup          ║"
-echo "╚══════════════════════════════════════╝"
-echo ""
-
-ENV_NAME="ekm"
-
-# ── 1. Check conda is available ───────────────────────────────────────────────
-if ! command -v conda &> /dev/null; then
-  echo "✗ conda not found."
-  echo "  Install Miniconda: https://docs.conda.io/en/latest/miniconda.html"
-  exit 1
-fi
-echo "✓ conda found: $(conda --version)"
-
-# ── 2. Create conda env if it doesn't exist ───────────────────────────────────
-if conda env list | grep -q "^$ENV_NAME "; then
-  echo "✓ Conda env '$ENV_NAME' already exists"
+# ── Detect Python command (python3 preferred) ─────────────────
+PYTHON_CMD=""
+if command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &>/dev/null; then
+    PYTHON_CMD="python"
 else
-  echo "→ Creating conda env '$ENV_NAME' with Python 3.11..."
-  conda create -n "$ENV_NAME" python=3.11 -y
-  echo "✓ Conda env '$ENV_NAME' created"
+    echo "[EKM] ERROR: No Python found. Please install Python 3.8+."
+    exit 1
 fi
 
-# ── 3. Install dependencies inside the env ────────────────────────────────────
-echo "→ Installing dependencies..."
-conda run -n "$ENV_NAME" pip install -q --upgrade pip
-conda run -n "$ENV_NAME" pip install -q -r requirements.txt
-echo "✓ Dependencies installed"
-
-# ── 4. Check .env ─────────────────────────────────────────────────────────────
-if [ ! -f ".env" ]; then
-  echo ""
-  echo "⚠️  No .env file found in backend/"
-  cp ../.env.example .env
-  echo "→ Created backend/.env from template — please edit it with your credentials"
-  echo "  Then re-run this script."
-  exit 1
+# ── Try Conda first ───────────────────────────────────────────
+CONDA_ACTIVATED=false
+if command -v conda &>/dev/null; then
+    echo "[EKM] Conda detected — activating environment 'ekm'..."
+    # Source conda init so activation works in non-interactive shells
+    CONDA_BASE=$(conda info --base 2>/dev/null)
+    if [ -f "$CONDA_BASE/etc/profile.d/conda.sh" ]; then
+        source "$CONDA_BASE/etc/profile.d/conda.sh"
+        conda activate ekm 2>/dev/null && CONDA_ACTIVATED=true
+    fi
+    if [ "$CONDA_ACTIVATED" = false ]; then
+        echo "[EKM] WARNING: Could not activate 'ekm' env — falling back to system Python"
+    fi
 fi
-echo "✓ .env found"
 
-# ── 5. Start the API ──────────────────────────────────────────────────────────
+# ── If conda not available, check/install deps ────────────────
+if [ "$CONDA_ACTIVATED" = false ]; then
+    echo "[EKM] Using system Python ($PYTHON_CMD)..."
+    if ! $PYTHON_CMD -m uvicorn --version &>/dev/null; then
+        echo "[EKM] uvicorn not found — installing requirements..."
+        # Try pip3 then pip, with --user fallback for permission errors
+        if command -v pip3 &>/dev/null; then
+            pip3 install -r requirements.txt 2>/dev/null || \
+            pip3 install -r requirements.txt --user 2>/dev/null || \
+            pip3 install -r requirements.txt --break-system-packages
+        else
+            pip install -r requirements.txt 2>/dev/null || \
+            pip install -r requirements.txt --user 2>/dev/null || \
+            pip install -r requirements.txt --break-system-packages
+        fi
+    fi
+fi
+
 echo ""
-echo "→ Starting FastAPI on http://localhost:8000"
-echo "   API docs: http://localhost:8000/docs"
-echo "   Running inside conda env: $ENV_NAME"
+echo "[EKM] Starting backend on http://localhost:8000"
+echo "[EKM] Press Ctrl+C to stop"
 echo ""
-conda run -n "$ENV_NAME" uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+$PYTHON_CMD -m uvicorn main:app --reload --host 0.0.0.0 --port 8000

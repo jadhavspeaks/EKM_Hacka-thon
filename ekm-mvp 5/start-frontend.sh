@@ -1,33 +1,29 @@
 #!/bin/bash
-# ─── EKM Frontend — Local Setup & Run ────────────────────────────────────────
-set -e
+# ============================================================
+#  EKM Frontend Starter — Linux / macOS
+#  Requires Node.js + npm (independent of Python/conda)
+#  Place this file in project root (next to /frontend)
+# ============================================================
 
-cd "$(dirname "$0")/frontend"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/frontend"
 
-echo ""
-echo "╔══════════════════════════════════════╗"
-echo "║   EKM Frontend — Local Setup         ║"
-echo "╚══════════════════════════════════════╝"
-echo ""
-
-# ── 1. Check Node ─────────────────────────────────────────────────────────────
-if ! command -v node &> /dev/null; then
-  echo "✗ Node.js not found. Install from https://nodejs.org (v18+)"
-  exit 1
+# ── Check npm ────────────────────────────────────────────────
+if ! command -v npm &>/dev/null; then
+    echo "[EKM] ERROR: npm not found."
+    echo "[EKM] Install Node.js: https://nodejs.org  or  sudo apt install nodejs npm"
+    exit 1
 fi
-echo "✓ Using $(node --version)"
 
-# ── 2. Install npm packages ───────────────────────────────────────────────────
+# ── Install dependencies if missing ──────────────────────────
 if [ ! -d "node_modules" ]; then
-  echo "→ Installing npm packages..."
-  npm install
-else
-  echo "✓ node_modules already installed"
+    echo "[EKM] node_modules not found — running npm install..."
+    npm install
 fi
 
-# ── 3. Start dev server ───────────────────────────────────────────────────────
 echo ""
-echo "→ Starting frontend on http://localhost:3000"
-echo "   (API calls proxied to http://localhost:8000)"
+echo "[EKM] Starting frontend on http://localhost:3000"
+echo "[EKM] Press Ctrl+C to stop"
 echo ""
+
 npm run dev
